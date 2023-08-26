@@ -1,3 +1,7 @@
+void debug_abort() {
+    abort();
+}
+
 /**
  * @file table.c
  * @brief Table storage implementation.
@@ -13,7 +17,7 @@
  * 
  * Not all ids in a table have to be components. Tags are ids that have no
  * data type associated with them, and as a result don't need to be explicitly
- * stored beyond an element in the table type. To save space and speed up table
+ * stored beyond an element in the table type. To save space and speed up tables
  * creation, each table has a reference to a "storage table", which is a table
  * that only includes component ids (so excluding tags).
  * 
@@ -49912,7 +49916,7 @@ void ecs_os_set_api_defaults(void)
         ecs_os_api.module_to_etc_ = ecs_os_api_module_to_etc;
     }
 
-    ecs_os_api.abort_ = abort;
+    ecs_os_api.abort_ = debug_abort;
 
 #   ifdef FLECS_OS_API_IMPL
     /* Initialize defaults to OS API IMPL addon, but still allow for overriding
@@ -57538,4 +57542,3 @@ void flecs_fini_id_records(
     ecs_map_fini(&world->id_index_hi);
     ecs_os_free(world->id_index_lo);
 }
-

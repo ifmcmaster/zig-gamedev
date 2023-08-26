@@ -21,17 +21,9 @@ pub const Package = struct {
         });
         if (optimize == .Debug) {
             // TODO: Workaround for Zig bug.
-            zstbi_c_cpp.addCSourceFile(thisDir() ++ "/libs/stbi/stb_image.c", &.{
-                "-std=c99",
-                "-fno-sanitize=undefined",
-                "-g",
-                "-O0",
-            });
+            zstbi_c_cpp.addCSourceFile(thisDir() ++ "/libs/stbi/stb_image.c", &.{});
         } else {
-            zstbi_c_cpp.addCSourceFile(thisDir() ++ "/libs/stbi/stb_image.c", &.{
-                "-std=c99",
-                "-fno-sanitize=undefined",
-            });
+            zstbi_c_cpp.addCSourceFile(thisDir() ++ "/libs/stbi/stb_image.c", &.{});
         }
         zstbi_c_cpp.linkLibC();
 

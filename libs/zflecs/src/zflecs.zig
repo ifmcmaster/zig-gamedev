@@ -33,6 +33,8 @@ pub extern const EcsPhase: entity_t;
 
 pub extern const EcsIsA: entity_t;
 pub extern const EcsDependsOn: entity_t;
+
+pub extern const EcsWildcard: entity_t;
 //--------------------------------------------------------------------------------------------------
 //
 // Types for core API objects.
@@ -507,7 +509,7 @@ pub const iter_t = extern struct {
     interrupted_by: entity_t,
     priv: iter_private_t,
     next: iter_next_action_t,
-    callback: iter_action_t,
+    callback: *const fn (it: *iter_t) callconv(.C) void,
     fini: iter_fini_action_t,
     chain_it: ?*iter_t,
 
@@ -659,7 +661,7 @@ pub const observer_desc_t = extern struct {
     filter: filter_desc_t = .{},
     events: [OBSERVER_DESC_EVENT_COUNT_MAX]entity_t = [_]entity_t{0} ** OBSERVER_DESC_EVENT_COUNT_MAX,
     yield_existing: bool = false,
-    callback: iter_action_t,
+    callback: ?iter_action_t = null,
     run: ?run_action_t = null,
     ctx: ?*anyopaque = null,
     binding_ctx: ?*anyopaque = null,
@@ -1544,13 +1546,13 @@ extern fn ecs_query_entity_count(query: *const query_t) i32;
 //--------------------------------------------------------------------------------------------------
 pub const event_desc_t = extern struct {
     event: entity_t = 0,
-    ids: ?[*]const type_t = null,
+    ids: ?*const type_t = null,
     table: ?*table_t = null,
     other_table: ?*table_t = null,
     offset: i32 = 0,
     count: i32 = 0,
     entity: entity_t = 0,
-    param: ?*const anyopaque = 0,
+    param: ?*const anyopaque = null,
     observable: ?*poly_t = null,
     flags: flags32_t = 0,
 };
@@ -1559,9 +1561,9 @@ pub const event_desc_t = extern struct {
 pub const emit = ecs_emit;
 extern fn ecs_emit(world: *world_t, desc: *event_desc_t) void;
 
-/// `pub fn observer_init(world: *world_t, desc: *const event_desc_t) entity_t`
+/// `pub fn observer_init(world: *world_t, desc: *const observer_desc_t) entity_t`
 pub const observer_init = ecs_observer_init;
-extern fn ecs_observer_init(world: *world_t, desc: *const event_desc_t) entity_t;
+extern fn ecs_observer_init(world: *world_t, desc: *observer_desc_t) entity_t;
 
 /// `pub fn observer_default_run_action(it: *iter_t) bool`
 pub const observer_default_run_action = ecs_observer_default_run_action;
@@ -1949,6 +1951,17 @@ pub fn get(world: *const world_t, entity: entity_t, comptime T: type) ?*const T 
     return null;
 }
 
+pub fn get_mut(world: *world_t, entity: entity_t, comptime T: type) ?*T {
+    if (get_mut_id(world, entity, id(T))) |ptr| {
+        return cast_mut(T, ptr);
+    }
+    return null;
+}
+
+pub fn modified(world: *world_t, entity: entity_t, comptime T: type) void {
+    ecs_modified_id(world, entity, id(T));
+}
+
 pub fn add(world: *world_t, entity: entity_t, comptime T: type) void {
     ecs_add_id(world, entity, id(T));
 }
@@ -2090,3 +2103,35 @@ comptime {
     _ = @import("tests.zig");
 }
 //--------------------------------------------------------------------------------------------------
+
+//---------- PIPELINE
+pub extern const EcsSystem: entity_t;
+pub const pipeline_desc_t = extern struct { entity: entity_t = 0, query: query_desc_t = .{} };
+
+pub const pipeline_init = ecs_pipeline_init;
+extern fn ecs_pipeline_init(world: *world_t, desc: *pipeline_desc_t) entity_t;
+
+pub const set_pipeline = ecs_set_pipeline;
+extern fn ecs_set_pipeline(world: *world_t, pipeline: entity_t) void;
+
+pub const get_pipeline = ecs_get_pipeline;
+extern fn ecs_get_pipeline(world: *const world_t) entity_t;
+
+pub const run_pipeline = ecs_run_pipeline;
+extern fn ecs_run_pipeline(world: *world_t, pipeline: entity_t, delta_time: ftime_t) void;
+
+pub extern const EcsDisabled: entity_t;
+pub extern const EcsChildOf: entity_t;
+
+//---------- REST
+pub extern const FLECS__EEcsRest: entity_t;
+pub const EcsRest = extern struct {
+    port: u16, // < Port of server (optional, default = 27750)
+    ipaddr: [*:0]const u8, // < Interface address (optional, default = 0.0.0.0)
+    impl: *anyopaque,
+};
+
+//----------- Observer Events
+pub extern const EcsOnAdd: entity_t;
+pub extern const EcsOnRemove: entity_t;
+pub extern const EcsOnSet: entity_t;

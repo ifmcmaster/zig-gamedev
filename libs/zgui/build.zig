@@ -5,6 +5,7 @@ pub const Package = struct {
         no_backend,
         glfw_wgpu,
         win32_dx12,
+        sdl2_gl3,
     };
     pub const Options = struct {
         backend: Backend,
@@ -31,7 +32,7 @@ pub const Package = struct {
         const zgui_options = step.createModule();
 
         const zgui = b.createModule(.{
-            .source_file = .{ .path = thisDir() ++ "/src/main.zig" },
+            .source_file = .{ .path = thisDir() ++ "/src/gui.zig" },
             .dependencies = &.{
                 .{ .name = "zgui_options", .module = zgui_options },
             },
@@ -90,6 +91,11 @@ pub const Package = struct {
                 zgui_c_cpp.addCSourceFile(thisDir() ++ "/libs/imgui/backends/imgui_impl_dx12.cpp", cflags);
                 zgui_c_cpp.linkSystemLibraryName("d3dcompiler_47");
                 zgui_c_cpp.linkSystemLibraryName("dwmapi");
+            },
+            .sdl2_gl3 => {
+                zgui_c_cpp.addIncludePath(thisDir() ++ "/../zsdl/libs/x86_64-windows-gnu/include/SDL2");
+                zgui_c_cpp.addCSourceFile(thisDir() ++ "/libs/imgui/backends/imgui_impl_sdl2.cpp", cflags);
+                zgui_c_cpp.addCSourceFile(thisDir() ++ "/libs/imgui/backends/imgui_impl_opengl3.cpp", cflags);
             },
             .no_backend => {},
         }
