@@ -19,26 +19,20 @@ pub fn build(b: *std.Build, options: Options) *std.Build.CompileStep {
     const ztracy_pkg = @import("../../build.zig").ztracy_pkg;
     const znoise_pkg = @import("../../build.zig").znoise_pkg;
 
-    exe.addModule("zgpu", zgpu_pkg.zgpu);
-    exe.addModule("zgui", zgui_pkg.zgui);
-    exe.addModule("zmath", zmath_pkg.zmath);
-    exe.addModule("zglfw", zglfw_pkg.zglfw);
-    exe.addModule("zmesh", zmesh_pkg.zmesh);
-    exe.addModule("ztracy", ztracy_pkg.ztracy);
-    exe.addModule("znoise", znoise_pkg.znoise);
     zgui_pkg.link(exe);
     zgpu_pkg.link(exe);
     znoise_pkg.link(exe);
     ztracy_pkg.link(exe);
     zglfw_pkg.link(exe);
     zmesh_pkg.link(exe);
+    zmath_pkg.link(exe);
 
     const exe_options = b.addOptions();
     exe.addOptions("build_options", exe_options);
     exe_options.addOption([]const u8, "content_dir", content_dir);
 
     const install_content_step = b.addInstallDirectory(.{
-        .source_dir = thisDir() ++ "/" ++ content_dir,
+        .source_dir = .{ .path = thisDir() ++ "/" ++ content_dir },
         .install_dir = .{ .custom = "" },
         .install_subdir = "bin/" ++ content_dir,
     });

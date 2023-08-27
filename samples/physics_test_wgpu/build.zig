@@ -18,12 +18,7 @@ pub fn build(b: *std.Build, options: Options) *std.Build.CompileStep {
     const zmesh_pkg = @import("../../build.zig").zmesh_pkg;
     const zphysics_pkg = @import("../../build.zig").zphysics_pkg;
 
-    exe.addModule("zgpu", zgpu_pkg.zgpu);
-    exe.addModule("zgui", zgui_pkg.zgui);
-    exe.addModule("zmath", zmath_pkg.zmath);
-    exe.addModule("zglfw", zglfw_pkg.zglfw);
-    exe.addModule("zmesh", zmesh_pkg.zmesh);
-    exe.addModule("zphysics", zphysics_pkg.zphysics);
+    zmath_pkg.link(exe);
     zgui_pkg.link(exe);
     zgpu_pkg.link(exe);
     zglfw_pkg.link(exe);
@@ -35,7 +30,7 @@ pub fn build(b: *std.Build, options: Options) *std.Build.CompileStep {
     exe_options.addOption([]const u8, "content_dir", content_dir);
 
     const install_content_step = b.addInstallDirectory(.{
-        .source_dir = thisDir() ++ "/" ++ content_dir,
+        .source_dir = .{ .path = thisDir() ++ "/" ++ content_dir },
         .install_dir = .{ .custom = "" },
         .install_subdir = "bin/" ++ content_dir,
     });

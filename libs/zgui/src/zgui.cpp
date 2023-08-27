@@ -178,6 +178,10 @@ ZGUI_API void zguiSeparator(void) {
     ImGui::Separator();
 }
 
+ZGUI_API void zguiSeparatorText(const char* label) {
+    ImGui::SeparatorText(label);
+}
+
 ZGUI_API void zguiSameLine(float offset_from_start_x, float spacing) {
     ImGui::SameLine(offset_from_start_x, spacing);
 }
@@ -254,6 +258,12 @@ ZGUI_API int zguiGetMouseCursor(void) {
 
 ZGUI_API void zguiSetMouseCursor(int cursor) {
     ImGui::SetMouseCursor(cursor);
+}
+
+ZGUI_API void zguiGetMousePos(float pos[2]) {
+    const ImVec2 p = ImGui::GetMousePos();
+    pos[0] = p.x;
+    pos[1] = p.y;
 }
 
 ZGUI_API void zguiAlignTextToFramePadding(void) {
@@ -1074,6 +1084,10 @@ ZGUI_API bool zguiTreeNode(const char* label) {
     return ImGui::TreeNode(label);
 }
 
+ZGUI_API bool zguiTreeNodeFlags(const char* label, ImGuiTreeNodeFlags flags) {
+    return ImGui::TreeNodeEx(label, flags);
+}
+
 ZGUI_API bool zguiTreeNodeStrId(const char* str_id, const char* fmt, ...) {
     va_list args;
     va_start(args, fmt);
@@ -1228,6 +1242,10 @@ ZGUI_API ImTextureID zguiIoGetFontsTexId(void) {
     return ImGui::GetIO().Fonts->TexID;
 }
 
+ZGUI_API void zguiIoSetConfigWindowsMoveFromTitleBarOnly(bool enabled) {
+    ImGui::GetIO().ConfigWindowsMoveFromTitleBarOnly = enabled;
+}
+
 ZGUI_API bool zguiIoGetWantCaptureMouse(void) {
     return ImGui::GetIO().WantCaptureMouse;
 }
@@ -1309,6 +1327,14 @@ ZGUI_API bool zguiIsItemFocused(void) {
 
 ZGUI_API bool zguiIsItemClicked(ImGuiMouseButton mouse_button) {
     return ImGui::IsItemClicked(mouse_button);
+}
+
+ZGUI_API bool zguiIsMouseDown(ImGuiMouseButton button) {
+    return ImGui::IsMouseDown(button);
+}
+
+ZGUI_API bool zguiIsMouseClicked(ImGuiMouseButton button) {
+    return ImGui::IsMouseClicked(button);
 }
 
 ZGUI_API bool zguiIsMouseDoubleClicked(ImGuiMouseButton button) {
@@ -1443,6 +1469,10 @@ ZGUI_API void zguiEndTooltip(void) {
     ImGui::EndTooltip();
 }
 
+ZGUI_API bool zguiBeginPopup(const char* str_id, ImGuiWindowFlags flags){
+    return ImGui::BeginPopup(str_id, flags);
+}
+
 ZGUI_API bool zguiBeginPopupContextWindow(void) {
     return ImGui::BeginPopupContextWindow();
 }
@@ -1471,14 +1501,14 @@ ZGUI_API void zguiCloseCurrentPopup(void) {
 // Tables
 //
 //--------------------------------------------------------------------------------------------------
-ZGUI_API void zguiBeginTable(
+ZGUI_API bool zguiBeginTable(
     const char* str_id,
     int column,
     ImGuiTableFlags flags,
     const float outer_size[2],
     float inner_width
 ) {
-    ImGui::BeginTable(str_id, column, flags, { outer_size[0], outer_size[1] }, inner_width);
+    return ImGui::BeginTable(str_id, column, flags, { outer_size[0], outer_size[1] }, inner_width);
 }
 
 ZGUI_API void zguiEndTable(void) {
@@ -1572,6 +1602,14 @@ ZGUI_API void zguiColorConvertRGBtoHSV(float r, float g, float b, float* out_h, 
 
 ZGUI_API void zguiColorConvertHSVtoRGB(float h, float s, float v, float* out_r, float* out_g, float* out_b) {
     return ImGui::ColorConvertHSVtoRGB(h, s, v, *out_r, *out_g, *out_b);
+}
+//--------------------------------------------------------------------------------------------------
+//
+// Inputs Utilities: Keyboard
+//
+//--------------------------------------------------------------------------------------------------
+ZGUI_API bool zguiIsKeyDown(ImGuiKey key) {
+    return ImGui::IsKeyDown(key);
 }
 //--------------------------------------------------------------------------------------------------
 //
@@ -2077,6 +2115,14 @@ ZGUI_API void zguiDrawList_PrimWriteVtx(
 ZGUI_API void zguiDrawList_PrimWriteIdx( ImDrawList* draw_list, ImDrawIdx idx) {
     draw_list->PrimWriteIdx(idx);
 }
+
+ZGUI_API void zguiDrawList_AddCallback(ImDrawList* draw_list, ImDrawCallback callback, void* callback_data) {
+    draw_list->AddCallback(callback, callback_data);
+}
+
+ZGUI_API void zguiDrawList_AddResetRenderStateCallback(ImDrawList* draw_list) {
+    draw_list->AddCallback(ImDrawCallback_ResetRenderState, NULL);
+}
 //--------------------------------------------------------------------------------------------------
 //
 // Viewport
@@ -2304,8 +2350,71 @@ ZGUI_API void zguiPlot_PlotScatterValues(
         assert(false);
 }
 
+ZGUI_API void zguiPlot_PlotShaded(
+    const char* label_id,
+    ImGuiDataType data_type,
+    const void* xv,
+    const void* yv,
+    int count,
+    double yref,
+    ImPlotShadedFlags flags,
+    int offset,
+    int stride
+) {
+    if (data_type == ImGuiDataType_S8)
+        ImPlot::PlotShaded(label_id, (const ImS8*)xv, (const ImS8*)yv, count, yref, flags, offset, stride);
+    else if (data_type == ImGuiDataType_U8)
+        ImPlot::PlotShaded(label_id, (const ImU8*)xv, (const ImU8*)yv, count, yref, flags, offset, stride);
+    else if (data_type == ImGuiDataType_S16)
+        ImPlot::PlotShaded(label_id, (const ImS16*)xv, (const ImS16*)yv, count, yref, flags, offset, stride);
+    else if (data_type == ImGuiDataType_U16)
+        ImPlot::PlotShaded(label_id, (const ImU16*)xv, (const ImU16*)yv, count, yref, flags, offset, stride);
+    else if (data_type == ImGuiDataType_S32)
+        ImPlot::PlotShaded(label_id, (const ImS32*)xv, (const ImS32*)yv, count, yref, flags, offset, stride);
+    else if (data_type == ImGuiDataType_U32)
+        ImPlot::PlotShaded(label_id, (const ImU32*)xv, (const ImU32*)yv, count, yref, flags, offset, stride);
+    else if (data_type == ImGuiDataType_Float)
+        ImPlot::PlotShaded(label_id, (const float*)xv, (const float*)yv, count, yref, flags, offset, stride);
+    else if (data_type == ImGuiDataType_Double)
+        ImPlot::PlotShaded(label_id, (const double*)xv, (const double*)yv, count, yref, flags, offset, stride);
+    else
+        assert(false);
+}
+
+ZGUI_API void zguiPlot_ShowDemoWindow(bool* p_open) {
+    ImPlot::ShowDemoWindow(p_open);
+}
+
 ZGUI_API void zguiPlot_EndPlot(void) {
     ImPlot::EndPlot();
 }
+ZGUI_API bool zguiPlot_DragPoint(
+        int id,
+        double* x,
+        double* y,
+        float col[4],
+        float size,
+        ImPlotDragToolFlags flags
+) {
+    return ImPlot::DragPoint(
+        id,
+        x,
+        y,
+        (*(const ImVec4*)&(col[0])),
+        size,
+        flags
+    );
+}
+
+ZGUI_API void zguiPlot_PlotText(
+        const char* text,
+        double x, double y,
+        const float pix_offset[2],
+        ImPlotTextFlags flags=0
+) {
+    const ImVec2 p(pix_offset[0], pix_offset[1]);
+    ImPlot::PlotText(text, x, y, p, flags);
+}
+
 //--------------------------------------------------------------------------------------------------
 } /* extern "C" */

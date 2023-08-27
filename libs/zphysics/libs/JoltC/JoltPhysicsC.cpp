@@ -11,6 +11,7 @@
 #include <Jolt/Core/JobSystemThreadPool.h>
 #include <Jolt/Physics/PhysicsSettings.h>
 #include <Jolt/Physics/PhysicsSystem.h>
+#include <Jolt/Physics/EPhysicsUpdateError.h>
 #include <Jolt/Physics/Collision/NarrowPhaseQuery.h>
 #include <Jolt/Physics/Collision/CollideShape.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
@@ -22,10 +23,20 @@
 #include <Jolt/Physics/Collision/Shape/ConvexHullShape.h>
 #include <Jolt/Physics/Collision/Shape/HeightFieldShape.h>
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
+#include <Jolt/Physics/Collision/Shape/RotatedTranslatedShape.h>
+#include <Jolt/Physics/Collision/Shape/ScaledShape.h>
+#include <Jolt/Physics/Collision/Shape/OffsetCenterOfMassShape.h>
 #include <Jolt/Physics/Collision/PhysicsMaterial.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
 #include <Jolt/Physics/Body/BodyActivationListener.h>
 #include <Jolt/Physics/Body/BodyLock.h>
+#include <Jolt/Physics/Body/BodyManager.h>
+#include <Jolt/Physics/Body/BodyFilter.h>
+
+#if JPC_DEBUG_RENDERER == 1
+#include <string_view>
+#include <Jolt/Renderer/DebugRenderer.h>
+#endif //JPC_DEBUG_RENDERER
 
 JPH_SUPPRESS_WARNINGS
 
@@ -175,6 +186,23 @@ FN(toJph)(JPC_ConvexShapeSettings *in) {
     return reinterpret_cast<JPH::ConvexShapeSettings *>(in);
 }
 
+FN(toJpc)(JPH::RotatedTranslatedShapeSettings *in) {
+    assert(in);
+    return reinterpret_cast<JPC_DecoratedShapeSettings *>(in);
+}
+FN(toJpc)(JPH::ScaledShapeSettings *in) {
+    assert(in);
+    return reinterpret_cast<JPC_DecoratedShapeSettings *>(in);
+}
+FN(toJpc)(JPH::OffsetCenterOfMassShapeSettings *in) {
+    assert(in);
+    return reinterpret_cast<JPC_DecoratedShapeSettings *>(in);
+}
+FN(toJph)(JPC_DecoratedShapeSettings *in) {
+    ENSURE_TYPE(in, JPH::DecoratedShapeSettings);
+    return reinterpret_cast<JPH::DecoratedShapeSettings *>(in);
+}
+
 FN(toJph)(const JPC_CollisionGroup *in) { assert(in); return reinterpret_cast<const JPH::CollisionGroup *>(in); }
 FN(toJpc)(const JPH::CollisionGroup *in) { assert(in); return reinterpret_cast<const JPC_CollisionGroup *>(in); }
 FN(toJpc)(JPH::CollisionGroup *in) { assert(in); return reinterpret_cast<JPC_CollisionGroup *>(in); }
@@ -248,6 +276,43 @@ FN(toJpc)(JPH::EShapeSubType in) { return static_cast<JPC_ShapeSubType>(in); }
 FN(toJpc)(JPH::EMotionType in) { return static_cast<JPC_MotionType>(in); }
 FN(toJpc)(JPH::EActivation in) { return static_cast<JPC_Activation>(in); }
 FN(toJpc)(JPH::EMotionQuality in) { return static_cast<JPC_MotionQuality>(in); }
+
+#if JPC_DEBUG_RENDERER == 1
+FN(toJpc)(const JPH::BodyManager::DrawSettings *in) { assert(in); return reinterpret_cast<const JPC_BodyManager_DrawSettings *>(in); }
+FN(toJph)(const JPC_BodyManager_DrawSettings *in) { assert(in); return reinterpret_cast<const JPH::BodyManager::DrawSettings *>(in); }
+FN(toJpc)(JPH::BodyManager::DrawSettings *in) { assert(in); return reinterpret_cast<JPC_BodyManager_DrawSettings *>(in); }
+FN(toJph)(JPC_BodyManager_DrawSettings *in) { assert(in); return reinterpret_cast<JPH::BodyManager::DrawSettings *>(in); }
+
+FN(toJpc)(const JPH::BodyDrawFilter *in) { assert(in); return reinterpret_cast<const JPC_BodyDrawFilter *>(in); }
+FN(toJph)(const JPC_BodyDrawFilter *in) { assert(in); return reinterpret_cast<const JPH::BodyDrawFilter *>(in); }
+FN(toJpc)(JPH::BodyDrawFilter *in) { assert(in); return reinterpret_cast<JPC_BodyDrawFilter *>(in); }
+FN(toJph)(JPC_BodyDrawFilter *in) { assert(in); return reinterpret_cast<JPH::BodyDrawFilter *>(in); }
+
+FN(toJpc)(const JPH::ColorArg *in) { assert(in); return reinterpret_cast<const JPC_Color *>(in); }
+FN(toJph)(const JPC_Color *in) { assert(in); return reinterpret_cast<const JPH::ColorArg *>(in); }
+FN(toJpc)(JPH::ColorArg *in) { assert(in); return reinterpret_cast<JPC_Color *>(in); }
+FN(toJph)(JPC_Color *in) { assert(in); return reinterpret_cast<JPH::ColorArg *>(in); }
+
+FN(toJpc)(const JPH::AABox *in) { assert(in); return reinterpret_cast<const JPC_AABox *>(in); }
+FN(toJph)(const JPC_AABox *in) { assert(in); return reinterpret_cast<const JPH::AABox *>(in); }
+FN(toJpc)(JPH::AABox *in) { assert(in); return reinterpret_cast<JPC_AABox *>(in); }
+FN(toJph)(JPC_AABox *in) { assert(in); return reinterpret_cast<JPH::AABox *>(in); }
+
+FN(toJpc)(const JPH::DebugRenderer::Vertex *in) { assert(in); return reinterpret_cast<const JPC_DebugRenderer_Vertex *>(in); }
+FN(toJph)(const JPC_DebugRenderer_Vertex *in) { assert(in); return reinterpret_cast<const JPH::DebugRenderer::Vertex *>(in); }
+FN(toJpc)(JPH::DebugRenderer::Vertex *in) { assert(in); return reinterpret_cast<JPC_DebugRenderer_Vertex *>(in); }
+FN(toJph)(JPC_DebugRenderer_Vertex *in) { assert(in); return reinterpret_cast<JPH::DebugRenderer::Vertex *>(in); }
+
+FN(toJpc)(const JPH::DebugRenderer::Triangle *in) { assert(in); return reinterpret_cast<const JPC_DebugRenderer_Triangle *>(in); }
+FN(toJph)(const JPC_DebugRenderer_Triangle *in) { assert(in); return reinterpret_cast<const JPH::DebugRenderer::Triangle *>(in); }
+FN(toJpc)(JPH::DebugRenderer::Triangle *in) { assert(in); return reinterpret_cast<JPC_DebugRenderer_Triangle *>(in); }
+FN(toJph)(JPC_DebugRenderer_Triangle *in) { assert(in); return reinterpret_cast<JPH::DebugRenderer::Triangle *>(in); }
+
+FN(toJpc)(const JPH::DebugRenderer::LOD *in) { assert(in); return reinterpret_cast<const JPC_DebugRenderer_LOD *>(in); }
+FN(toJph)(const JPC_DebugRenderer_LOD *in) { assert(in); return reinterpret_cast<const JPH::DebugRenderer::LOD *>(in); }
+FN(toJpc)(JPH::DebugRenderer::LOD *in) { assert(in); return reinterpret_cast<JPC_DebugRenderer_LOD *>(in); }
+FN(toJph)(JPC_DebugRenderer_LOD *in) { assert(in); return reinterpret_cast<JPH::DebugRenderer::LOD *>(in); }
+#endif //JPC_DEBUG_RENDERER
 
 #undef FN
 
@@ -490,6 +555,225 @@ public:
     CListener *c_listener;
 };
 
+#if JPC_DEBUG_RENDERER == 1
+
+class DebugRendererImpl final : public JPH::DebugRenderer
+{
+public:
+
+    class RenderPrimitive : public JPH::RefTarget<RenderPrimitive>
+    {
+    protected:
+        RenderPrimitive(const JPC_DebugRenderer_Primitive *prim) : c_primitive(prim) { }
+        const JPC_DebugRenderer_Primitive *c_primitive;
+    };
+
+    class BatchImpl : public JPH::RefTargetVirtual, public RenderPrimitive
+    {
+    public:
+        JPH_OVERRIDE_NEW_DELETE
+        BatchImpl(const JPC_DebugRenderer_Primitive *prim) : RenderPrimitive(prim) { }
+
+        virtual void AddRef() override
+        {
+            RenderPrimitive::AddRef();
+        }
+        virtual void Release() override
+        {
+            if (--mRefCount == 0) delete this;
+        }
+        const JPC_DebugRenderer_Primitive *GetPrimitive() const
+        {
+            return c_primitive;
+        }
+    };
+
+    class BodyDrawFilter : public JPH::BodyDrawFilter
+    {
+        JPC_BodyDrawFilterFunc func = nullptr;
+    public:
+        JPH_OVERRIDE_NEW_DELETE
+        BodyDrawFilter(const JPC_BodyDrawFilterFunc func) : func(func) {}
+        virtual bool ShouldDraw(const JPH::Body& inBody) const override
+        {
+            return func(toJpc(&inBody));
+        }
+    };
+
+    struct CRenderer
+    {
+        JPC_DebugRendererVTable *vtbl;
+    };
+    CRenderer *c_renderer;
+    static DebugRendererImpl *sInstance;
+
+    JPH_OVERRIDE_NEW_DELETE
+    DebugRendererImpl(CRenderer *in_renderer) : c_renderer(in_renderer)
+    {
+        DebugRenderer::Initialize();
+    }
+    JPC_DebugRendererResult ValidateCallbacks()
+    {
+        bool valid = true;
+        valid &= (c_renderer->vtbl->DrawLine                   != nullptr);
+        valid &= (c_renderer->vtbl->DrawTriangle               != nullptr);
+        valid &= (c_renderer->vtbl->CreateTriangleBatch        != nullptr);
+        valid &= (c_renderer->vtbl->CreateTriangleBatchIndexed != nullptr);
+        valid &= (c_renderer->vtbl->DrawGeometry               != nullptr);
+        valid &= (c_renderer->vtbl->DrawText3D                 != nullptr);
+        return valid ? JPC_DEBUGRENDERER_SUCCESS : JPC_DEBUGRENDERER_INCOMPLETE_IMPL;
+    }
+    virtual void DrawLine(JPH::RVec3Arg inFrom, JPH::RVec3Arg inTo, JPH::ColorArg inColor) override
+    {
+        JPC_Real in_from[3];
+        storeRVec3(in_from, inFrom);
+        JPC_Real in_to[3];
+        storeRVec3(in_to, inTo);
+        c_renderer->vtbl->DrawLine(c_renderer, in_from, in_to, *toJpc(&inColor));
+    }
+    virtual void DrawTriangle(
+        JPH::RVec3Arg inV1,
+        JPH::RVec3Arg inV2,
+        JPH::RVec3Arg inV3,
+        JPH::ColorArg inColor) override
+    {
+        JPC_Real in_v1[3];
+        storeRVec3(in_v1, inV1);
+        JPC_Real in_v2[3];
+        storeRVec3(in_v2, inV2);
+        JPC_Real in_v3[3];
+        storeRVec3(in_v3, inV3);
+        c_renderer->vtbl->DrawTriangle(c_renderer, in_v1, in_v2, in_v3, *toJpc(&inColor));
+    }
+    virtual JPH::DebugRenderer::Batch CreateTriangleBatch(
+        const JPH::DebugRenderer::Triangle *inTriangles,
+        int inTriangleCount) override
+    {
+        JPC_DebugRenderer_TriangleBatch *c_batch = c_renderer->vtbl->CreateTriangleBatch(
+            c_renderer,
+            toJpc(inTriangles),
+            inTriangleCount);
+        auto jph_batch = reinterpret_cast<BatchImpl *>(c_batch);
+        return jph_batch;
+    }
+    virtual JPH::DebugRenderer::Batch CreateTriangleBatch(
+        const JPH::DebugRenderer::Vertex *inVertices,
+        int inVertexCount,
+        const uint32_t *inIndices,
+        int inIndexCount) override
+    {
+        JPC_DebugRenderer_TriangleBatch *c_batch = c_renderer->vtbl->CreateTriangleBatchIndexed(
+            c_renderer,
+            toJpc(inVertices),
+            inVertexCount,
+            inIndices,
+            inIndexCount);
+        auto jph_batch = reinterpret_cast<BatchImpl *>(c_batch);
+        return jph_batch;
+    }
+    virtual void DrawGeometry(
+        JPH::RMat44Arg inModelMatrix,
+        const JPH::AABox &inWorldSpaceBounds,
+        float inLODScaleSq,
+        JPH::ColorArg inModelColor,
+        const JPH::DebugRenderer::GeometryRef &inGeometry,
+        JPH::DebugRenderer::ECullMode inCullMode,
+        JPH::DebugRenderer::ECastShadow inCastShadow,
+        JPH::DebugRenderer::EDrawMode inDrawMode) override
+    {
+        float in_model_matrix[16]; // Model matrix will always be rounded to floats (JPH samples assume the same).
+        storeMat44(in_model_matrix, inModelMatrix.ToMat44());
+        JPC_DebugRenderer_Geometry in_geometry {
+            toJpc(&inGeometry.GetPtr()->mLODs[0]),
+            static_cast<uint64_t>(inGeometry.GetPtr()->mLODs.size()),
+            toJpc(&inGeometry.GetPtr()->mBounds)
+        };
+        c_renderer->vtbl->DrawGeometry(
+            c_renderer,
+            in_model_matrix,
+            toJpc(&inWorldSpaceBounds),
+            inLODScaleSq,
+            *toJpc(&inModelColor),
+            &in_geometry,
+            static_cast<JPC_CullMode>(inCullMode),
+            static_cast<JPC_CastShadow>(inCastShadow),
+            static_cast<JPC_DrawMode>(inDrawMode));
+    }
+    virtual void DrawText3D(
+        JPH::RVec3Arg inPosition,
+        const std::string_view &inString,
+        JPH::ColorArg inColor,
+        float inHeight) override
+    {
+        JPC_Real in_position[3];
+        storeRVec3(in_position, inPosition);
+        c_renderer->vtbl->DrawText3D(
+            c_renderer,
+            in_position,
+            std::string(inString).c_str(),
+            *toJpc(&inColor),
+            inHeight);
+    }
+};
+DebugRendererImpl *DebugRendererImpl::sInstance = nullptr;
+//--------------------------------------------------------------------------------------------------
+JPC_API JPC_DebugRendererResult
+JPC_CreateDebugRendererSingleton(void *in_debug_renderer)
+{
+    assert(JPH::DebugRenderer::sInstance == nullptr); //Only one instance of JPH::DebugRenderer may ever be made
+    if (JPH::DebugRenderer::sInstance != nullptr) return JPC_DEBUGRENDERER_DUPLICATE_SINGLETON; //No assert in release
+    DebugRendererImpl::sInstance =
+        new DebugRendererImpl(reinterpret_cast<DebugRendererImpl::CRenderer *>(in_debug_renderer));
+    // At this point, a pointer to the created instance is also kept in JPH::DebugRenderer::sInstance.
+    return DebugRendererImpl::sInstance->ValidateCallbacks();
+}
+
+JPC_API JPC_DebugRendererResult
+JPC_DestroyDebugRendererSingleton()
+{
+    assert(JPH::DebugRenderer::sInstance != nullptr); //The singleton must have already been instantiated
+    if (JPH::DebugRenderer::sInstance == nullptr) return JPC_DEBUGRENDERER_MISSING_SINGLETON; //No assert in release
+    delete DebugRendererImpl::sInstance;
+    return JPC_DEBUGRENDERER_SUCCESS;
+}
+
+JPC_API JPC_DebugRenderer_TriangleBatch *
+JPC_DebugRenderer_TriangleBatch_Create(const void *in_c_primitive)
+{
+    auto batch = static_cast<DebugRendererImpl::BatchImpl *>(JPH::Allocate(sizeof(DebugRendererImpl::BatchImpl)));
+    ::new (batch) DebugRendererImpl::BatchImpl(reinterpret_cast<const JPC_DebugRenderer_Primitive *>(in_c_primitive));
+    return reinterpret_cast<JPC_DebugRenderer_TriangleBatch *>(batch);
+}
+
+JPC_API const JPC_DebugRenderer_Primitive *
+JPC_DebugRenderer_TriangleBatch_GetPrimitive(const JPC_DebugRenderer_TriangleBatch * in_batch)
+{
+    auto fat_batch = reinterpret_cast<const DebugRendererImpl::BatchImpl *>(in_batch);
+    return fat_batch->GetPrimitive();
+}
+
+JPC_API void
+JPC_DebugRenderer_TriangleBatch_AddRef(JPC_DebugRenderer_TriangleBatch *in_batch)
+{
+    assert(in_batch);
+    reinterpret_cast<DebugRendererImpl::BatchImpl *>(in_batch)->AddRef();
+}
+
+JPC_API void
+JPC_DebugRenderer_TriangleBatch_Release(JPC_DebugRenderer_TriangleBatch *in_batch)
+{
+    assert(in_batch);
+    reinterpret_cast<DebugRendererImpl::BatchImpl *>(in_batch)->Release();
+}
+
+JPC_API uint32_t
+JPC_DebugRenderer_TriangleBatch_GetRefCount(const JPC_DebugRenderer_TriangleBatch *in_batch)
+{
+    assert(in_batch);
+    return reinterpret_cast<const DebugRendererImpl::BatchImpl *>(in_batch)->GetRefCount();
+}
+#endif //JPC_DEBUG_RENDERER
+
 struct PhysicsSystemData
 {
     uint64_t safety_token = 0xC0DEC0DEC0DEC0DE;
@@ -592,6 +876,42 @@ JPC_PhysicsSystem_GetContactListener(const JPC_PhysicsSystem *in_physics_system)
     return listener->c_listener;
 }
 //--------------------------------------------------------------------------------------------------
+#if JPC_DEBUG_RENDERER == 1
+JPC_API void
+JPC_PhysicsSystem_DrawBodies(JPC_PhysicsSystem *in_physics_system,
+                             const JPC_BodyManager_DrawSettings *in_draw_settings,
+                             const JPC_BodyDrawFilter *in_draw_filter = nullptr)
+{
+    // It's weird that JPH has both a singleton DebugRenderer and a DebugRenderer pointer passed into
+    // some of the draw functions. The pointer should always be the singleton instance, right?
+    assert(JPH::DebugRenderer::sInstance != nullptr);
+    const JPH::BodyManager::DrawSettings *settings = toJph(in_draw_settings);
+    const JPH::BodyDrawFilter *filter = (in_draw_filter != nullptr) ? toJph(in_draw_filter) : nullptr;
+    toJph(in_physics_system)->DrawBodies(*settings, JPH::DebugRenderer::sInstance, filter);
+}
+//--------------------------------------------------------------------------------------------------
+JPC_API void
+JPC_PhysicsSystem_DrawConstraints(JPC_PhysicsSystem *in_physics_system)
+{
+    assert(JPH::DebugRenderer::sInstance != nullptr);
+    toJph(in_physics_system)->DrawConstraints(JPH::DebugRenderer::sInstance);
+}
+//--------------------------------------------------------------------------------------------------
+JPC_API void
+JPC_PhysicsSystem_DrawConstraintLimits(JPC_PhysicsSystem *in_physics_system)
+{
+    assert(JPH::DebugRenderer::sInstance != nullptr);
+    toJph(in_physics_system)->DrawConstraintLimits(JPH::DebugRenderer::sInstance);
+}
+//--------------------------------------------------------------------------------------------------
+JPC_API void
+JPC_PhysicsSystem_DrawConstraintReferenceFrame(JPC_PhysicsSystem *in_physics_system)
+{
+    assert(JPH::DebugRenderer::sInstance != nullptr);
+    toJph(in_physics_system)->DrawConstraintReferenceFrame(JPH::DebugRenderer::sInstance);
+}
+#endif //JPC_DEBUG_RENDERER
+//--------------------------------------------------------------------------------------------------
 JPC_API uint32_t
 JPC_PhysicsSystem_GetNumBodies(const JPC_PhysicsSystem *in_physics_system)
 {
@@ -640,6 +960,20 @@ JPC_PhysicsSystem_OptimizeBroadPhase(JPC_PhysicsSystem *in_physics_system)
 }
 //--------------------------------------------------------------------------------------------------
 JPC_API void
+JPC_PhysicsSystem_AddStepListener(JPC_PhysicsSystem *in_physics_system, void *in_listener)
+{
+    assert(in_listener != nullptr);
+    toJph(in_physics_system)->AddStepListener(static_cast<JPH::PhysicsStepListener *>(in_listener));
+}
+//--------------------------------------------------------------------------------------------------
+JPC_API void
+JPC_PhysicsSystem_RemoveStepListener(JPC_PhysicsSystem *in_physics_system, void *in_listener)
+{
+    assert(in_listener != nullptr);
+    toJph(in_physics_system)->RemoveStepListener(static_cast<JPH::PhysicsStepListener *>(in_listener));
+}
+//--------------------------------------------------------------------------------------------------
+JPC_API JPC_PhysicsUpdateError
 JPC_PhysicsSystem_Update(JPC_PhysicsSystem *in_physics_system,
                          float in_delta_time,
                          int in_collision_steps,
@@ -648,12 +982,13 @@ JPC_PhysicsSystem_Update(JPC_PhysicsSystem *in_physics_system,
                          JPC_JobSystem *in_job_system)
 {
     assert(in_temp_allocator != nullptr && in_job_system != nullptr);
-    toJph(in_physics_system)->Update(
+    JPC_PhysicsUpdateError error = (JPC_PhysicsUpdateError)toJph(in_physics_system)->Update(
         in_delta_time,
         in_collision_steps,
         in_integration_sub_steps,
         reinterpret_cast<JPH::TempAllocator *>(in_temp_allocator),
         reinterpret_cast<JPH::JobSystem *>(in_job_system));
+    return error;
 }
 //--------------------------------------------------------------------------------------------------
 JPC_API const JPC_BodyLockInterface *
@@ -1250,6 +1585,81 @@ JPC_MeshShapeSettings_Sanitize(JPC_MeshShapeSettings *in_settings)
 }
 //--------------------------------------------------------------------------------------------------
 //
+// JPC_DecoratedShapeSettings (-> JPC_ShapeSettings)
+//
+//--------------------------------------------------------------------------------------------------
+JPC_API JPC_DecoratedShapeSettings *
+JPC_RotatedTranslatedShapeSettings_Create(const JPC_ShapeSettings *in_inner_shape_settings,
+                                          const JPC_Real in_rotated[4],
+                                          const JPC_Real in_translated[3])
+{
+    auto settings = new JPH::RotatedTranslatedShapeSettings(loadRVec3(in_translated),
+                                                            JPH::Quat(loadVec4(in_rotated)),
+                                                            toJph(in_inner_shape_settings));
+    settings->AddRef();
+    return toJpc(settings);
+}
+//--------------------------------------------------------------------------------------------------
+JPC_API JPC_DecoratedShapeSettings *
+JPC_ScaledShapeSettings_Create(const JPC_ShapeSettings *in_inner_shape_settings,
+                               const JPC_Real in_scale[3])
+{
+    auto settings = new JPH::ScaledShapeSettings(toJph(in_inner_shape_settings), loadRVec3(in_scale));
+    settings->AddRef();
+    return toJpc(settings);
+}
+//--------------------------------------------------------------------------------------------------
+JPC_API JPC_DecoratedShapeSettings *
+JPC_OffsetCenterOfMassShapeSettings_Create(const JPC_ShapeSettings *in_inner_shape_settings,
+                                           const JPC_Real in_center_of_mass[3])
+{
+    auto settings = new JPH::OffsetCenterOfMassShapeSettings(loadRVec3(in_center_of_mass),
+                                                             toJph(in_inner_shape_settings));
+    settings->AddRef();
+    return toJpc(settings);
+}
+//--------------------------------------------------------------------------------------------------
+//
+// JPC_BodyManager_DrawSettings
+//
+//--------------------------------------------------------------------------------------------------
+#if JPC_DEBUG_RENDERER == 1
+JPC_API JPC_BodyManager_DrawSettings *
+JPC_BodyManager_DrawSettings_Create()
+{
+    auto settings =
+        static_cast<JPH::BodyManager::DrawSettings *>
+            (JPH::Allocate(sizeof(JPH::BodyManager::DrawSettings)));
+    ::new (settings) JPH::BodyManager::DrawSettings();
+    return toJpc(reinterpret_cast<JPH::BodyManager::DrawSettings *>(settings));
+}
+//--------------------------------------------------------------------------------------------------
+JPC_API void
+JPC_BodyManager_DrawSettings_Destroy(JPC_BodyManager_DrawSettings *settings)
+{
+    JPH::Free(reinterpret_cast<JPH::BodyManager::DrawSettings *>(settings));
+}
+#endif //JPC_DEBUG_RENDERER
+//--------------------------------------------------------------------------------------------------
+//
+// JPC_BodyDrawFilter
+//
+//--------------------------------------------------------------------------------------------------
+#if JPC_DEBUG_RENDERER == 1
+JPC_API JPC_BodyDrawFilter *
+JPC_BodyDrawFilter_Create(const JPC_BodyDrawFilterFunc func)
+{
+    return toJpc(new DebugRendererImpl::BodyDrawFilter(func));
+}
+//--------------------------------------------------------------------------------------------------
+JPC_API void
+JPC_BodyDrawFilter_Destroy(JPC_BodyDrawFilter *filter)
+{
+    JPH::Free(reinterpret_cast<DebugRendererImpl::BodyDrawFilter *>(filter));
+}
+#endif //JPC_DEBUG_RENDERER
+//--------------------------------------------------------------------------------------------------
+//
 // JPC_Shape
 //
 //--------------------------------------------------------------------------------------------------
@@ -1420,6 +1830,23 @@ JPC_BodyInterface_GetPointVelocity(const JPC_BodyInterface *in_iface,
 }
 //--------------------------------------------------------------------------------------------------
 JPC_API void
+JPC_BodyInterface_GetPosition(const JPC_BodyInterface *in_iface,
+                              JPC_BodyID in_body_id,
+                              JPC_Real out_position[3])
+{
+    storeRVec3(out_position, toJph(in_iface)->GetPosition(toJph(in_body_id)));
+}
+//--------------------------------------------------------------------------------------------------
+JPC_API void
+JPC_BodyInterface_SetPosition(JPC_BodyInterface *in_iface,
+                                          JPC_BodyID in_body_id,
+                                          const JPC_Real in_position[3],
+                                          JPC_Activation in_activation)
+{
+    toJph(in_iface)->SetPosition(toJph(in_body_id), loadRVec3(in_position), static_cast<JPH::EActivation>(in_activation));
+}
+//--------------------------------------------------------------------------------------------------
+JPC_API void
 JPC_BodyInterface_GetCenterOfMassPosition(const JPC_BodyInterface *in_iface,
                                           JPC_BodyID in_body_id,
                                           JPC_Real out_position[3])
@@ -1427,6 +1854,35 @@ JPC_BodyInterface_GetCenterOfMassPosition(const JPC_BodyInterface *in_iface,
     storeRVec3(out_position, toJph(in_iface)->GetCenterOfMassPosition(toJph(in_body_id)));
 }
 //--------------------------------------------------------------------------------------------------
+JPC_API void
+JPC_BodyInterface_SetRotation(JPC_BodyInterface *in_iface,
+                              JPC_BodyID in_body_id,
+                              const JPC_Real in_rotation[4],
+                              JPC_Activation in_activation)
+{
+    toJph(in_iface)->SetRotation(toJph(in_body_id), JPH::Quat(loadVec4(in_rotation)), static_cast<JPH::EActivation>(in_activation));
+}
+//--------------------------------------------------------------------------------------------------
+JPC_API void
+JPC_BodyInterface_GetRotation(const JPC_BodyInterface *in_iface,
+                              JPC_BodyID in_body_id,
+                              float out_rotation[4])
+{
+    storeVec4(out_rotation, toJph(in_iface)->GetRotation(toJph(in_body_id)).GetXYZW());
+}
+//--------------------------------------------------------------------------------------------------
+JPC_API void
+JPC_BodyInterface_ActivateBody(JPC_BodyInterface *in_iface, JPC_BodyID in_body_id)
+{
+    toJph(in_iface)->ActivateBody(toJph(in_body_id));
+}
+
+JPC_API void
+JPC_BodyInterface_DeactivateBody(JPC_BodyInterface *in_iface, JPC_BodyID in_body_id)
+{
+    toJph(in_iface)->DeactivateBody(toJph(in_body_id));
+}
+
 JPC_API bool
 JPC_BodyInterface_IsActive(const JPC_BodyInterface *in_iface, JPC_BodyID in_body_id)
 {
@@ -1498,6 +1954,18 @@ JPC_API void
 JPC_BodyInterface_AddAngularImpulse(JPC_BodyInterface *in_iface, JPC_BodyID in_body_id, const float in_impulse[3])
 {
     toJph(in_iface)->AddAngularImpulse(toJph(in_body_id), loadVec3(in_impulse));
+}
+//--------------------------------------------------------------------------------------------------
+JPC_API JPC_MotionType 
+JPC_BodyInterface_GetMotionType(const JPC_BodyInterface *in_iface, JPC_BodyID in_body_id)
+{
+    return toJpc(toJph(in_iface)->GetMotionType(toJph(in_body_id)));
+}
+//--------------------------------------------------------------------------------------------------
+JPC_API void
+JPC_BodyInterface_SetMotionType(JPC_BodyInterface *in_iface, JPC_BodyID in_body_id, JPC_MotionType in_motion_type, JPC_Activation in_activation)
+{
+    toJph(in_iface)->SetMotionType(toJph(in_body_id), static_cast<JPH::EMotionType>(in_motion_type), static_cast<JPH::EActivation>(in_activation));
 }
 //--------------------------------------------------------------------------------------------------
 //
