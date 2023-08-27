@@ -1,6 +1,3 @@
-void debug_abort() {
-    abort();
-}
 
 /**
  * @file table.c
@@ -54,6 +51,11 @@ void debug_abort() {
 #include <stdlib.h>
 #include <limits.h>
 #include <stdio.h>
+
+/** Allows inspecting callstack when flecs aborts */
+void debug_abort() {
+    abort();
+}
 
 /**
  * @file datastructures/entity_index.h
@@ -49916,7 +49918,7 @@ void ecs_os_set_api_defaults(void)
         ecs_os_api.module_to_etc_ = ecs_os_api_module_to_etc;
     }
 
-    ecs_os_api.abort_ = debug_abort;
+    ecs_os_api.abort_ = abort;
 
 #   ifdef FLECS_OS_API_IMPL
     /* Initialize defaults to OS API IMPL addon, but still allow for overriding

@@ -119,7 +119,7 @@ pub fn package(
             zgui_c_cpp.linkSystemLibraryName("dwmapi");
         },
         .sdl2_gl3 => {
-            zgui_c_cpp.addIncludePath(.{ .path = thisDir() ++ "/../zsdl/libs/x86_64-windows-gnu/include/SDL2" });
+            zgui_c_cpp.addIncludePath(.{ .path = thisDir() ++ "./libs/SDL2/include" });
             zgui_c_cpp.addCSourceFiles(&.{
                 thisDir() ++ "/libs/imgui/backends/imgui_impl_sdl2.cpp",
                 thisDir() ++ "/libs/imgui/backends/imgui_impl_opengl3.cpp",

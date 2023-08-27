@@ -48,7 +48,7 @@ pub fn newFrame(fb_width: u32, fb_height: u32) void {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplSDL2_NewFrame();
 
-    gui.io.setDisplaySize(@as(f32, fb_width), @as(f32, fb_height));
+    gui.io.setDisplaySize(@floatFromInt(fb_width), @floatFromInt(fb_height));
     gui.io.setDisplayFramebufferScale(1.0, 1.0);
 
     gui.newFrame();
