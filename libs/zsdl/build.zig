@@ -44,9 +44,13 @@ pub const Package = struct {
                 }
             },
             .macos => {
-                exe.addFrameworkPath(.{ .path = thisDir() ++ "/libs/macos/Frameworks" });
-                exe.linkFramework("SDL2");
-                exe.addRPath(.{ .path = "@executable_path/Frameworks" });
+                // exe.addFrameworkPath(.{ .path = thisDir() ++ "/libs/macos/Frameworks" });
+                // exe.linkFramework("SDL2");
+                // exe.addRPath(.{ .path = "@executable_path/Frameworks" });
+
+                exe.addIncludePath(.{.path = "/opt/homebrew/include"});
+                exe.addLibraryPath(.{.path = "/opt/homebrew/lib"});
+                exe.linkSystemLibraryName("SDL2");
 
                 if (pkg.options.enable_ttf) {
                     exe.linkFramework("SDL2_ttf");
