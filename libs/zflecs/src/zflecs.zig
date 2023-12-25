@@ -977,10 +977,6 @@ fn flecs_abort() callconv(.C) noreturn {
 //
 //--------------------------------------------------------------------------------------------------
 pub fn init() *world_t {
-    if (builtin.os.tag == .windows) {
-        os.ecs_os_api.abort_ = flecs_abort;
-    }
-
     assert(num_worlds == 0);
 
     if (num_worlds == 0) {
@@ -996,6 +992,10 @@ pub fn init() *world_t {
     num_worlds += 1;
     component_ids_hm.ensureTotalCapacity(32) catch @panic("OOM");
     const world = ecs_init();
+
+    if (builtin.os.tag == .windows) {
+        os.ecs_os_api.abort_ = flecs_abort;
+    }
 
     Wildcard = EcsWildcard;
     Any = EcsAny;
