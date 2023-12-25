@@ -325,12 +325,13 @@ pub const Up = 1 << 2;
 pub const Down = 1 << 3;
 pub const TraverseAll = 1 << 4;
 pub const Cascade = 1 << 5;
-pub const Parent = 1 << 6;
-pub const IsVariable = 1 << 7;
-pub const IsEntity = 1 << 8;
-pub const IsName = 1 << 9;
-pub const Filter = 1 << 10;
-pub const TraverseFlags = Up | Down | TraverseAll | Self | Cascade | Parent;
+pub const Desc = 1 << 6;
+pub const Parent = 1 << 7;
+pub const IsVariable = 1 << 8;
+pub const IsEntity = 1 << 9;
+pub const IsName = 1 << 10;
+pub const Filter = 1 << 11;
+pub const TraverseFlags = Up | Down | TraverseAll | Self | Cascade | Desc | Parent;
 
 pub const TermMatchAny = 1 << 0;
 pub const TermMatchAnySrc = 1 << 1;
@@ -2669,7 +2670,7 @@ pub extern fn FlecsMonitorImport(world: *world_t) void;
 //--------------------------------------------------------------------------------------------------
 
 pub extern fn FlecsRestImport(world: *world_t) void;
-// pub extern const FLECS__EEcsRest: entity_t;
+pub extern const FLECS_IDEcsRestID_: entity_t;
 pub const EcsRest = extern struct {
     port: u16, // < Port of server (optional, default = 27750)
     ipaddr: ?[*:0]const u8 = null, // < Interface address (optional, default = 0.0.0.0)
