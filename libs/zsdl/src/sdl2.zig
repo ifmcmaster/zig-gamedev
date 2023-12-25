@@ -165,16 +165,10 @@ pub const Window = opaque {
         tooltip: bool = false,
         popup_menu: bool = false,
         keyboard_grabbed: bool = false,
-
-        __unused21: bool = false,
-        __unused22: bool = false,
-        __unused23: bool = false,
-        __unused24: bool = false,
-
-        vulkan: bool = false,
+        __unused21: u7 = 0,
+        vulkan: bool = false, // 0x10000000
         metal: bool = false,
-
-        __unused: u5 = 0,
+        __unused30: u2 = 0,
 
         pub const fullscreen_desktop: Flags = .{ .fullscreen = true, ._desktop = true };
         pub const input_grabbed: Flags = .{ .mouse_grabbed = true };
@@ -974,6 +968,58 @@ pub const SysWMType = enum(i32) {
     riscos,
 };
 
+pub const SysWMInfo = extern struct {
+    version: Version,
+    subsystem: SysWMType,
+    info: extern union {
+        win: extern struct {
+            hwnd: *opaque {},
+            hdc: *opaque {},
+            hinstance: *opaque {},
+        },
+        x11: extern struct {
+            display: *opaque {},
+            window: *opaque {},
+        },
+        winrt: extern struct {
+            window: *opaque {},
+        },
+        dfb: extern struct {
+            dfb: *opaque {},
+            window: *opaque {},
+            surface: *opaque {},
+        },
+        cocoa: extern struct {
+            window: *opaque {},
+        },
+        uikit: extern struct {
+            window: *opaque {},
+            framebuffer: c_uint,
+            colorbuffer: c_uint,
+            resolveFramebuffer: c_uint,
+        },
+        wl: extern struct {
+            display: *opaque {},
+            surface: *opaque {},
+            shell_surface: *opaque {},
+        },
+        android: extern struct {
+            window: *opaque {},
+            surface: *opaque {},
+        },
+        vivante: extern struct {
+            display: *opaque {},
+            window: *opaque {},
+        },
+        dummy: [64]u8,
+        // MIR -- SDL unsupported and recommended to drop after 2.1
+
+        comptime {
+            assert(@sizeOf(@This()) == 64);
+        }
+    },
+};
+
 /// Get driver-specific information about a window.
 ///
 /// The caller must initialize the `info` structure's version by using
@@ -987,76 +1033,6 @@ pub fn getWindowWMInfo(window: *Window, info: *SysWMInfo) bool {
     return SDL_GetWindowWMInfo(window, info) == True;
 }
 extern fn SDL_GetWindowWMInfo(window: *Window, info: *SysWMInfo) Bool;
-
-pub const SysWMInfo_win = extern struct {
-    hwnd: *opaque {},
-    hdc: *opaque {},
-    hinstance: *opaque {},
-};
-
-pub const SysWMInfo_x11 = extern struct {
-    display: *opaque {},
-    window: *opaque {},
-};
-
-pub const SysWMInfo_winrt = extern struct {
-    window: *opaque {},
-};
-
-pub const SysWMInfo_dfb = extern struct {
-    dfb: *opaque {},
-    window: *opaque {},
-    surface: *opaque {},
-};
-
-pub const SysWMInfo_cocoa = extern struct {
-    window: *opaque {},
-};
-
-pub const SysWMInfo_uikit = extern struct {
-    window: *opaque {},
-    frame_buffer: u32,
-    color_buffer: u32,
-    resolve_frame_buffer: u32,
-};
-
-pub const SysWMInfo_wayland = extern struct {
-    display: *opaque {},
-    surface: *opaque {},
-    shell_surface: *opaque {},
-};
-
-pub const SysWMInfo_android = extern struct {
-    window: *opaque {},
-    surface: *opaque {},
-};
-
-pub const SysWMInfo_vivante = extern struct {
-    display: *opaque {},
-    window: *opaque {},
-};
-
-pub const SysWMInfo = extern struct {
-    version: Version,
-    subsystem: SysWMType,
-    info: extern union {
-        win: SysWMInfo_win,
-        x11: SysWMInfo_x11,
-        winrt: SysWMInfo_winrt,
-        dfb: SysWMInfo_dfb,
-        cocoa: SysWMInfo_cocoa,
-        uikit: SysWMInfo_uikit,
-        wl: SysWMInfo_wayland,
-        android: SysWMInfo_android,
-        vivante: SysWMInfo_vivante,
-        dummy: [64]u8,
-        // MIR -- SDL unsupported and recommended to drop after 2.1
-
-        comptime {
-            assert(@sizeOf(@This()) == 64);
-        }
-    },
-};
 
 //--------------------------------------------------------------------------------------------------
 //

@@ -161,10 +161,10 @@ pub const Window = opaque {
         tooltip: bool = false,
         popup_menu: bool = false,
         keyboard_grabbed: bool = false,
-        __unused21: u4 = 0,
-        vulkan: bool = false,
+        __unused21: u7 = 0,
+        vulkan: bool = false, // 0x10000000
         metal: bool = false,
-        __unused27: u5 = 0,
+        __unused30: u2 = 0,
     };
 
     pub const pos_undefined = posUndefinedDisplay(0);
@@ -957,6 +957,95 @@ pub const Surface = opaque {
 // Platform-specific Window Management
 //
 //--------------------------------------------------------------------------------------------------
+const SYSWM_CURRENT_VERSION = 1;
+const SYSWM_INFO_SIZE_V1 = 16 * 8;
+const SYSWM_CURRENT_INFO_SIZE = SYSWM_INFO_SIZE_V1;
+
+pub const SysWMType = enum(u32) {
+    unknown,
+    android,
+    cocoa,
+    haiku,
+    kmsdrm,
+    riscos,
+    uikit,
+    vivante,
+    wayland,
+    windows,
+    winrt,
+    x11,
+    _,
+};
+
+pub const SysWMInfo = extern struct {
+    version: u32,
+    subsystem: SysWMType,
+    _: [(2 * 8 - 2 * 4) / 4]u8 = undefined, // padding
+    info: extern union {
+        win: extern struct {
+            window: *opaque {},
+            hdc: *opaque {},
+            hinstance: *opaque {},
+        },
+        winrt: extern struct {
+            window: *opaque {},
+        },
+        x11: extern struct {
+            display: *opaque {},
+            screen: c_int,
+            window: *opaque {},
+        },
+        cocoa: extern struct {
+            window: *opaque {},
+        },
+        uikit: extern struct {
+            window: *opaque {},
+            framebuffer: c_uint,
+            colorbuffer: c_uint,
+            resolveFramebuffer: c_uint,
+        },
+        wl: extern struct {
+            display: *opaque {},
+            surface: *opaque {},
+            egl_window: *opaque {},
+            xdg_surface: *opaque {},
+            xdg_toplevel: *opaque {},
+            xdg_popup: *opaque {},
+            xdg_positioner: *opaque {},
+        },
+        android: extern struct {
+            window: *opaque {},
+            surface: *opaque {},
+        },
+        vivante: extern struct {
+            display: *opaque {},
+            window: *opaque {},
+        },
+        kmsdrm: extern struct {
+            dev_index: c_int,
+            drm_fd: c_int,
+            gbm_dev: *opaque {},
+        },
+        dummy: [14]u64,
+    },
+};
+
+comptime {
+    assert(@sizeOf(SysWMInfo) == SYSWM_CURRENT_INFO_SIZE);
+}
+
+pub fn getWindowWMInfo(window: *Window) Error!SysWMInfo {
+    var info = SysWMInfo{
+        .version = SYSWM_CURRENT_VERSION,
+        .subsystem = undefined,
+        .info = undefined,
+    };
+    if (SDL_GetWindowWMInfo(window, &info) == 0) {
+        return info;
+    }
+    return makeError();
+}
+extern fn SDL_GetWindowWMInfo(window: *Window, info: *SysWMInfo) c_int;
 
 //--------------------------------------------------------------------------------------------------
 //
@@ -969,6 +1058,36 @@ pub const Surface = opaque {
 // Vulkan Support
 //
 //--------------------------------------------------------------------------------------------------
+pub const vk = struct {
+
+    pub const FunctionPointer = ?*const anyopaque;
+    pub const Instance = enum(usize) { null_handle = 0, _ };
+
+    pub fn loadLibrary(path: ?[*:0]const u8) Error!void {
+        if (SDL_Vulkan_LoadLibrary(path) < 0) return makeError();
+    }
+    extern fn SDL_Vulkan_LoadLibrary(path: ?[*]const u8) i32;
+
+    pub fn getVkGetInstanceProcAddr() FunctionPointer {
+        return SDL_Vulkan_GetVkGetInstanceProcAddr();
+    }
+    extern fn SDL_Vulkan_GetVkGetInstanceProcAddr() FunctionPointer;
+
+    pub fn unloadLibrary() void {
+        SDL_Vulkan_UnloadLibrary();
+    }
+    extern fn SDL_Vulkan_UnloadLibrary() void;
+
+    pub fn getInstanceExtensions(count: *i32, maybe_names: ?[*][*:0]u8) bool {
+        return SDL_Vulkan_GetInstanceExtensions(count, maybe_names);
+    }
+    extern fn SDL_Vulkan_GetInstanceExtensions(count: *i32, names: ?[*][*]u8) bool;
+
+    pub fn createSurface(window: *Window, instance: Instance, surface: *anyopaque) bool {
+        return SDL_Vulkan_CreateSurface(window, instance, surface);
+    }
+    extern fn SDL_Vulkan_CreateSurface(window: *Window, instance: Instance, surface: *anyopaque) bool;
+};
 
 //--------------------------------------------------------------------------------------------------
 //
@@ -1242,6 +1361,17 @@ pub fn pollEvent(event: ?*Event) bool {
 }
 extern fn SDL_PollEvent(event: ?*Event) i32;
 
+/// You should set the common.timestamp field before passing an event to `pushEvent`.
+/// If the timestamp is 0 it will be filled in with `getTicksNS()`.
+/// Returns true if event was added
+///         false if event was filtered out
+pub fn pushEvent(event: *Event) Error!bool {
+    const status = SDL_PushEvent(event);
+    if (status < 0) return makeError();
+    return status == 1;
+}
+extern fn SDL_PushEvent(event: *Event) c_int;
+
 //--------------------------------------------------------------------------------------------------
 //
 // Keyboard Support
@@ -1507,6 +1637,10 @@ extern fn SDL_ClearQueuedAudio(AudioDeviceId) void;
 // Timer Support
 //
 //--------------------------------------------------------------------------------------------------
+/// Get the number of nanoseconds since SDL library initialization.
+pub const getTicksNS = SDL_GetTicksNS;
+extern fn SDL_GetTicksNS() u64;
+
 pub const getPerformanceCounter = SDL_GetPerformanceCounter;
 extern fn SDL_GetPerformanceCounter() u64;
 
