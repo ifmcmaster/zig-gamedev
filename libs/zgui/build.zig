@@ -146,10 +146,10 @@ pub fn package(
         },
         .sdl2_gl3 => {
             zgui_c_cpp.addIncludePath(.{ .path = thisDir() ++ "./libs/SDL2/include" });
-            zgui_c_cpp.addCSourceFiles(&.{
+            zgui_c_cpp.addCSourceFiles(.{.files = &.{
                 thisDir() ++ "/libs/imgui/backends/imgui_impl_sdl2.cpp",
                 thisDir() ++ "/libs/imgui/backends/imgui_impl_opengl3.cpp",
-            }, cflags);
+            }, .flags = cflags});
         },
         .no_backend => {},
     }

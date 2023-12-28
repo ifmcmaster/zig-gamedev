@@ -72,9 +72,7 @@ pub fn build(b: *std.Build) void {
     //
     // Experiments
     //
-    if (b.option(bool, "experiments", "Build our prototypes and experimental programs") orelse false) {
-        @import("experiments/build.zig").build(b, options);
-    }
+    
 }
 
 fn packagesCrossPlatform(b: *std.Build, options: Options) void {
