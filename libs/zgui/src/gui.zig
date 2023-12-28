@@ -9,6 +9,7 @@ pub const version = @import("std").SemanticVersion{ .major = 1, .minor = 89, .pa
 pub const plot = @import("plot.zig");
 pub const backend = switch (@import("zgui_options").backend) {
     .glfw_wgpu => @import("backend_glfw_wgpu.zig"),
+    .glfw_opengl3 => @import("backend_glfw_opengl.zig"),
     .win32_dx12 => .{}, // TODO:
     .sdl2_gl3 => @import("backend_sdl2_gl3.zig"),
     .no_backend => .{},
@@ -2704,7 +2705,7 @@ extern fn zguiSetNextItemOpen(is_open: bool, cond: Condition) void;
 //--------------------------------------------------------------------------------------------------
 pub const SelectableFlags = packed struct(u32) {
     dont_close_popups: bool = false,
-    span_all_colums: bool = false,
+    span_all_columns: bool = false,
     allow_double_click: bool = false,
     disabled: bool = false,
     allow_item_overlap: bool = false,

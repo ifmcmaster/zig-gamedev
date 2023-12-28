@@ -1,7 +1,7 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
-pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 12, .patch = 0, .pre = "dev.126" };
+pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 12, .patch = 0, .pre = "dev.1381" };
 
 pub fn build(b: *std.Build) void {
     //
@@ -90,8 +90,11 @@ fn packagesCrossPlatform(b: *std.Build, options: Options) void {
     znoise_pkg = znoise.package(b, target, optimize, .{});
     zstbi_pkg = zstbi.package(b, target, optimize, .{});
     zbullet_pkg = zbullet.package(b, target, optimize, .{});
-    zgui_pkg = zgui.package(b, target, optimize, .{
+    zgui_glfw_wgpu_pkg = zgui.package(b, target, optimize, .{
         .options = .{ .backend = .glfw_wgpu },
+    });
+    zgui_glfw_gl_pkg = zgui.package(b, target, optimize, .{
+        .options = .{ .backend = .glfw_opengl3 },
     });
     zgpu_pkg = zgpu.package(b, target, optimize, .{
         .options = .{ .uniforms_buffer_size = 4 * 1024 * 1024 },
@@ -152,7 +155,8 @@ fn packagesWindows(b: *std.Build, options: Options) void {
 }
 
 fn samplesCrossPlatform(b: *std.Build, options: Options) void {
-    const minimal_gl = @import("samples/minimal_gl/build.zig");
+    const minimal_glfw_gl = @import("samples/minimal_glfw_gl/build.zig");
+    const minimal_sdl_gl = @import("samples/minimal_sdl_gl/build.zig");
     const triangle_wgpu = @import("samples/triangle_wgpu/build.zig");
     const procedural_mesh_wgpu = @import("samples/procedural_mesh_wgpu/build.zig");
     const textured_quad_wgpu = @import("samples/textured_quad_wgpu/build.zig");
@@ -161,17 +165,20 @@ fn samplesCrossPlatform(b: *std.Build, options: Options) void {
     const audio_experiments_wgpu = @import("samples/audio_experiments_wgpu/build.zig");
     const gui_test_wgpu = @import("samples/gui_test_wgpu/build.zig");
     const minimal_zgpu_zgui = @import("samples/minimal_zgpu_zgui/build.zig");
+    const minimal_zgui_glfw_gl = @import("samples/minimal_zgui_glfw_gl/build.zig");
     const instanced_pills_wgpu = @import("samples/instanced_pills_wgpu/build.zig");
     const layers_wgpu = @import("samples/layers_wgpu/build.zig");
     const gamepad_wgpu = @import("samples/gamepad_wgpu/build.zig");
     const physics_test_wgpu = @import("samples/physics_test_wgpu/build.zig");
     const monolith = @import("samples/monolith/build.zig");
 
-    install(b, minimal_gl.build(b, options), "minimal_gl");
+    install(b, minimal_glfw_gl.build(b, options), "minimal_glfw_gl");
+    install(b, minimal_sdl_gl.build(b, options), "minimal_sdl_gl");
     install(b, triangle_wgpu.build(b, options), "triangle_wgpu");
     install(b, textured_quad_wgpu.build(b, options), "textured_quad_wgpu");
     install(b, gui_test_wgpu.build(b, options), "gui_test_wgpu");
     install(b, minimal_zgpu_zgui.build(b, options), "minimal_zgpu_zgui");
+    install(b, minimal_zgui_glfw_gl.build(b, options), "minimal_zgui_glfw_gl");
     install(b, physically_based_rendering_wgpu.build(b, options), "physically_based_rendering_wgpu");
     install(b, instanced_pills_wgpu.build(b, options), "instanced_pills_wgpu");
     install(b, gamepad_wgpu.build(b, options), "gamepad_wgpu");
@@ -190,27 +197,27 @@ fn samplesWindowsLinux(b: *std.Build, options: Options) void {
     const mesh_shader_test = @import("samples/mesh_shader_test/build.zig");
     const rasterization = @import("samples/rasterization/build.zig");
     const bindless = @import("samples/bindless/build.zig");
-    const simple_raytracer = @import("samples/simple_raytracer/build.zig");
+    //const simple_raytracer = @import("samples/simple_raytracer/build.zig");
 
     install(b, minimal_d3d12.build(b, options), "minimal_d3d12");
     install(b, bindless.build(b, options), "bindless");
     install(b, triangle.build(b, options), "triangle");
-    install(b, simple_raytracer.build(b, options), "simple_raytracer");
+    //install(b, simple_raytracer.build(b, options), "simple_raytracer");
     install(b, textured_quad.build(b, options), "textured_quad");
     install(b, rasterization.build(b, options), "rasterization");
     install(b, mesh_shader_test.build(b, options), "mesh_shader_test");
 }
 
 fn samplesWindows(b: *std.Build, options: Options) void {
-    //const audio_playback_test = @import("samples/audio_playback_test/build.zig");
-    //const audio_experiments = @import("samples/audio_experiments/build.zig");
+    const audio_playback_test = @import("samples/audio_playback_test/build.zig");
+    const audio_experiments = @import("samples/audio_experiments/build.zig");
     const vector_graphics_test = @import("samples/vector_graphics_test/build.zig");
-    //const directml_convolution_test = @import("samples/directml_convolution_test/build.zig");
+    const directml_convolution_test = @import("samples/directml_convolution_test/build.zig");
 
     install(b, vector_graphics_test.build(b, options), "vector_graphics_test");
-    //install(b, directml_convolution_test.build(b, options), "directml_convolution_test");
-    //install(b, audio_playback_test.build(b, options), "audio_playback_test");
-    //install(b, audio_experiments.build(b, options), "audio_experiments");
+    install(b, directml_convolution_test.build(b, options), "directml_convolution_test");
+    install(b, audio_playback_test.build(b, options), "audio_playback_test");
+    install(b, audio_experiments.build(b, options), "audio_experiments");
 }
 
 fn tests(b: *std.Build, options: Options) void {
@@ -226,6 +233,7 @@ fn tests(b: *std.Build, options: Options) void {
     test_step.dependOn(zaudio.runTests(b, options.optimize, options.target));
     test_step.dependOn(zflecs.runTests(b, options.optimize, options.target));
     test_step.dependOn(zphysics.runTests(b, options.optimize, options.target));
+    test_step.dependOn(zopengl.runTests(b, options.optimize, options.target));
 
     // TODO: zsdl test not included in top-level tests until https://github.com/michal-z/zig-gamedev/issues/312 is resolved
     //test_step.dependOn(zsdl.runTests(b, options.optimize, options.target));
@@ -246,7 +254,8 @@ pub var zmesh_pkg: zmesh.Package = undefined;
 pub var zglfw_pkg: zglfw.Package = undefined;
 pub var zstbi_pkg: zstbi.Package = undefined;
 pub var zbullet_pkg: zbullet.Package = undefined;
-pub var zgui_pkg: zgui.Package = undefined;
+pub var zgui_glfw_wgpu_pkg: zgui.Package = undefined;
+pub var zgui_glfw_gl_pkg: zgui.Package = undefined;
 pub var zgpu_pkg: zgpu.Package = undefined;
 pub var ztracy_pkg: ztracy.Package = undefined;
 pub var zphysics_pkg: zphysics.Package = undefined;
@@ -390,7 +399,7 @@ fn ensureGit(allocator: std.mem.Allocator) !void {
         }
     }).impl;
     const argv = &[_][]const u8{ "git", "version" };
-    const result = std.ChildProcess.exec(.{
+    const result = std.ChildProcess.run(.{
         .allocator = allocator,
         .argv = argv,
         .cwd = thisDir(),
@@ -424,7 +433,7 @@ fn ensureGitLfs(allocator: std.mem.Allocator, cmd: []const u8) !void {
         }
     }).impl;
     const argv = &[_][]const u8{ "git", "lfs", cmd };
-    const result = std.ChildProcess.exec(.{
+    const result = std.ChildProcess.run(.{
         .allocator = allocator,
         .argv = argv,
         .cwd = thisDir(),
