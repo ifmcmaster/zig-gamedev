@@ -1927,6 +1927,9 @@ extern fn ecs_query_get_binding_ctx(query: *const query_t) ?*anyopaque;
 pub const emit = ecs_emit;
 extern fn ecs_emit(world: *world_t, desc: *event_desc_t) void;
 
+pub const enqueue = ecs_enqueue;
+extern fn ecs_enqueue(world: *world_t, desc: *event_desc_t) void;
+
 /// `pub fn observer_init(world: *world_t, desc: *const observer_desc_t) entity_t`
 pub const observer_init = ecs_observer_init;
 extern fn ecs_observer_init(world: *world_t, desc: *const observer_desc_t) entity_t;
