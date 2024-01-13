@@ -2,7 +2,7 @@ const std = @import("std");
 const assert = std.debug.assert;
 const builtin = @import("builtin");
 
-pub const flecs_version = "3.2.7";
+pub const flecs_version = "3.2.10";
 
 // TODO: Ensure synced with flecs build flags.
 const flecs_is_debug = builtin.mode == .Debug;
@@ -325,12 +325,13 @@ pub const Up = 1 << 2;
 pub const Down = 1 << 3;
 pub const TraverseAll = 1 << 4;
 pub const Cascade = 1 << 5;
-pub const Parent = 1 << 6;
-pub const IsVariable = 1 << 7;
-pub const IsEntity = 1 << 8;
-pub const IsName = 1 << 9;
-pub const Filter = 1 << 10;
-pub const TraverseFlags = Up | Down | TraverseAll | Self | Cascade | Parent;
+pub const Desc = 1 << 6;
+pub const Parent = 1 << 7;
+pub const IsVariable = 1 << 8;
+pub const IsEntity = 1 << 9;
+pub const IsName = 1 << 10;
+pub const Filter = 1 << 11;
+pub const TraverseFlags = Up | Down | TraverseAll | Self | Cascade | Desc | Parent;
 
 pub const TermMatchAny = 1 << 0;
 pub const TermMatchAnySrc = 1 << 1;
@@ -806,7 +807,7 @@ pub const observer_desc_t = extern struct {
     filter: filter_desc_t = .{},
     events: [FLECS_EVENT_DESC_MAX]entity_t = [_]entity_t{0} ** FLECS_EVENT_DESC_MAX,
     yield_existing: bool = false,
-    callback: iter_action_t,
+    callback: ?iter_action_t = null,
     run: ?run_action_t = null,
     ctx: ?*anyopaque = null,
     binding_ctx: ?*anyopaque = null,
@@ -819,7 +820,7 @@ pub const observer_desc_t = extern struct {
 
 pub const event_desc_t = extern struct {
     event: entity_t = 0,
-    ids: ?[*]const type_t = null,
+    ids: ?*const type_t = null,
     table: ?*table_t = null,
     other_table: ?*table_t = null,
     offset: i32 = 0,
@@ -977,10 +978,6 @@ fn flecs_abort() callconv(.C) noreturn {
 //
 //--------------------------------------------------------------------------------------------------
 pub fn init() *world_t {
-    if (builtin.os.tag == .windows) {
-        os.ecs_os_api.abort_ = flecs_abort;
-    }
-
     assert(num_worlds == 0);
 
     if (num_worlds == 0) {
@@ -996,6 +993,10 @@ pub fn init() *world_t {
     num_worlds += 1;
     component_ids_hm.ensureTotalCapacity(32) catch @panic("OOM");
     const world = ecs_init();
+
+    if (builtin.os.tag == .windows) {
+        os.ecs_os_api.abort_ = flecs_abort;
+    }
 
     Wildcard = EcsWildcard;
     Any = EcsAny;
@@ -1926,6 +1927,9 @@ extern fn ecs_query_get_binding_ctx(query: *const query_t) ?*anyopaque;
 pub const emit = ecs_emit;
 extern fn ecs_emit(world: *world_t, desc: *event_desc_t) void;
 
+pub const enqueue = ecs_enqueue;
+extern fn ecs_enqueue(world: *world_t, desc: *event_desc_t) void;
+
 /// `pub fn observer_init(world: *world_t, desc: *const observer_desc_t) entity_t`
 pub const observer_init = ecs_observer_init;
 extern fn ecs_observer_init(world: *world_t, desc: *const observer_desc_t) entity_t;
@@ -2623,6 +2627,22 @@ comptime {
 }
 //--------------------------------------------------------------------------------------------------
 
+//---------- PIPELINE
+pub extern const EcsSystem: entity_t;
+pub const pipeline_desc_t = extern struct { entity: entity_t = 0, query: query_desc_t = .{} };
+
+pub const pipeline_init = ecs_pipeline_init;
+extern fn ecs_pipeline_init(world: *world_t, desc: *pipeline_desc_t) entity_t;
+
+pub const set_pipeline = ecs_set_pipeline;
+extern fn ecs_set_pipeline(world: *world_t, pipeline: entity_t) void;
+
+pub const get_pipeline = ecs_get_pipeline;
+extern fn ecs_get_pipeline(world: *const world_t) entity_t;
+
+pub const run_pipeline = ecs_run_pipeline;
+extern fn ecs_run_pipeline(world: *world_t, pipeline: entity_t, delta_time: ftime_t) void;
+
 //--------------------------------------------------------------------------------------------------
 //
 // ADDONS
@@ -2653,9 +2673,9 @@ pub extern fn FlecsMonitorImport(world: *world_t) void;
 //--------------------------------------------------------------------------------------------------
 
 pub extern fn FlecsRestImport(world: *world_t) void;
-
+pub extern const FLECS_IDEcsRestID_: entity_t;
 pub const EcsRest = extern struct {
-    port: u16 = 0,
-    ipaddr: ?[*:0]u8 = null,
+    port: u16, // < Port of server (optional, default = 27750)
+    ipaddr: ?[*:0]const u8 = null, // < Interface address (optional, default = 0.0.0.0)
     impl: ?*anyopaque = null,
 };

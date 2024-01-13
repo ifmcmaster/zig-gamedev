@@ -34,6 +34,8 @@ pub fn package(
             "-fno-sanitize=undefined",
             "-DFLECS_NO_CPP",
             "-DFLECS_USE_OS_ALLOC",
+            "-g",
+            "-O0",
             if (@import("builtin").mode == .Debug) "-DFLECS_SANITIZE" else "",
         },
     });

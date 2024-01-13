@@ -8,6 +8,7 @@ pub const Backend = enum {
     glfw_wgpu,
     glfw_opengl3,
     win32_dx12,
+    sdl2_gl3,
 };
 
 const default_options = struct {
@@ -179,6 +180,13 @@ pub fn package(
             });
             zgui_c_cpp.root_module.linkSystemLibrary("d3dcompiler_47", .{});
             zgui_c_cpp.root_module.linkSystemLibrary("dwmapi", .{});
+        },
+        .sdl2_gl3 => {
+            zgui_c_cpp.addIncludePath(.{ .path = thisDir() ++ "./libs/SDL2/include" });
+            zgui_c_cpp.addCSourceFiles(.{.files = &.{
+                thisDir() ++ "/libs/imgui/backends/imgui_impl_sdl2.cpp",
+                thisDir() ++ "/libs/imgui/backends/imgui_impl_opengl3.cpp",
+            }, .flags = cflags});
         },
         .no_backend => {},
     }
