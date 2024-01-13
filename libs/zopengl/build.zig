@@ -15,7 +15,7 @@ pub const Package = struct {
     zopengl_options: *std.Build.Module,
 
     pub fn link(pkg: Package, exe: *std.Build.Step.Compile) void {
-        exe.root_module.addImport("zopengl", pkg.zopengl);
+        exe.root_module.addImport("zgl", pkg.zopengl);
     }
 };
 
