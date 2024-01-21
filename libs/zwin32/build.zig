@@ -13,8 +13,8 @@ pub const Package = struct {
     install_xaudio2: *std.Build.Step,
     install_directml: *std.Build.Step,
 
-    pub fn link(pkg: Package, exe: *std.Build.CompileStep, libs: Libs) void {
-        exe.addModule("zwin32", pkg.zwin32);
+    pub fn link(pkg: Package, exe: *std.Build.Step.Compile, libs: Libs) void {
+        exe.root_module.addImport("zwin32", pkg.zwin32);
         if (libs.d3d12) exe.step.dependOn(pkg.install_d3d12);
         if (libs.xaudio2) exe.step.dependOn(pkg.install_xaudio2);
         if (libs.directml) exe.step.dependOn(pkg.install_directml);
@@ -23,18 +23,30 @@ pub const Package = struct {
 
 pub fn package(
     b: *std.Build,
-    _: std.zig.CrossTarget,
+    _: std.Build.ResolvedTarget,
     _: std.builtin.Mode,
     _: struct {},
 ) Package {
     const install_d3d12 = b.allocator.create(std.Build.Step) catch @panic("OOM");
-    install_d3d12.* = std.Build.Step.init(.{ .id = .custom, .name = "zwin32-install-d3d12", .owner = b });
+    install_d3d12.* = std.Build.Step.init(.{
+        .id = .custom,
+        .name = "zwin32-install-d3d12",
+        .owner = b,
+    });
 
     const install_xaudio2 = b.allocator.create(std.Build.Step) catch @panic("OOM");
-    install_xaudio2.* = std.Build.Step.init(.{ .id = .custom, .name = "zwin32-install-xaudio2", .owner = b });
+    install_xaudio2.* = std.Build.Step.init(.{
+        .id = .custom,
+        .name = "zwin32-install-xaudio2",
+        .owner = b,
+    });
 
     const install_directml = b.allocator.create(std.Build.Step) catch @panic("OOM");
-    install_directml.* = std.Build.Step.init(.{ .id = .custom, .name = "zwin32-install-directml", .owner = b });
+    install_directml.* = std.Build.Step.init(.{
+        .id = .custom,
+        .name = "zwin32-install-directml",
+        .owner = b,
+    });
 
     install_d3d12.dependOn(
         &b.addInstallFile(
@@ -70,8 +82,8 @@ pub fn package(
     );
 
     return .{
-        .zwin32 = b.createModule(.{
-            .source_file = .{ .path = thisDir() ++ "/src/zwin32.zig" },
+        .zwin32 = b.addModule("zwin32", .{
+            .root_source_file = .{ .path = thisDir() ++ "/src/zwin32.zig" },
         }),
         .install_d3d12 = install_d3d12,
         .install_xaudio2 = install_xaudio2,
@@ -79,7 +91,12 @@ pub fn package(
     };
 }
 
-pub fn build(_: *std.Build) void {}
+pub fn build(b: *std.Build) void {
+    const optimize = b.standardOptimizeOption(.{});
+    const target = b.standardTargetOptions(.{});
+
+    _ = package(b, target, optimize, .{});
+}
 
 inline fn thisDir() []const u8 {
     return comptime std.fs.path.dirname(@src().file) orelse ".";

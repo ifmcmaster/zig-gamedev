@@ -1,7 +1,7 @@
 const builtin = @import("builtin");
 const std = @import("std");
 
-pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 12, .patch = 0, .pre = "dev.1381" };
+pub const min_zig_version = std.SemanticVersion{ .major = 0, .minor = 12, .patch = 0, .pre = "dev.2139" };
 
 pub fn build(b: *std.Build) void {
     //
@@ -34,7 +34,7 @@ pub fn build(b: *std.Build) void {
     //
     packagesCrossPlatform(b, options);
 
-    if (options.target.isWindows() and
+    if (options.target.result.os.tag == .windows and
         (builtin.target.os.tag == .windows or builtin.target.os.tag == .linux))
     {
         packagesWindowsLinux(b, options);
@@ -49,7 +49,7 @@ pub fn build(b: *std.Build) void {
     //
     samplesCrossPlatform(b, options);
 
-    if (options.target.isWindows() and
+    if (options.target.result.os.tag == .windows and
         (builtin.target.os.tag == .windows or builtin.target.os.tag == .linux))
     {
         samplesWindowsLinux(b, options);
@@ -72,9 +72,7 @@ pub fn build(b: *std.Build) void {
     //
     // Experiments
     //
-    if (b.option(bool, "experiments", "Build our prototypes and experimental programs") orelse false) {
-        @import("experiments/build.zig").build(b, options);
-    }
+    
 }
 
 fn packagesCrossPlatform(b: *std.Build, options: Options) void {
@@ -98,13 +96,10 @@ fn packagesCrossPlatform(b: *std.Build, options: Options) void {
     });
     zgpu_pkg = zgpu.package(b, target, optimize, .{
         .options = .{ .uniforms_buffer_size = 4 * 1024 * 1024 },
-        .deps = .{ .zpool = zpool_pkg.zpool, .zglfw = zglfw_pkg.zglfw },
+        .deps = .{ .zpool = zpool_pkg, .zglfw = zglfw_pkg },
     });
     ztracy_pkg = ztracy.package(b, target, optimize, .{
-        .options = .{
-            .enable_ztracy = !target.isDarwin(), // TODO: ztracy fails to compile on macOS.
-            .enable_fibers = !target.isDarwin(),
-        },
+        .options = .{ .enable_ztracy = true, .enable_fibers = true },
     });
     zphysics_pkg = zphysics.package(b, target, optimize, .{});
     zaudio_pkg = zaudio.package(b, target, optimize, .{});
@@ -235,8 +230,22 @@ fn tests(b: *std.Build, options: Options) void {
     test_step.dependOn(zphysics.runTests(b, options.optimize, options.target));
     test_step.dependOn(zopengl.runTests(b, options.optimize, options.target));
 
-    // TODO: zsdl test not included in top-level tests until https://github.com/michal-z/zig-gamedev/issues/312 is resolved
-    //test_step.dependOn(zsdl.runTests(b, options.optimize, options.target));
+    // TODO: zsdl tests not included in top-level tests until https://github.com/michal-z/zig-gamedev/issues/312 is resolved
+    // test_step.dependOn(zsdl.runTests(b, options.optimize, options.target, .sdl2));
+    // test_step.dependOn(zsdl.runTests(b, options.optimize, options.target, .sdl3));
+
+    test_step.dependOn(zgpu_pkg.makeTestStep(b));
+    test_step.dependOn(ztracy_pkg.makeTestStep(b));
+
+    // TODO(hazeycode): Make zgui with backends testable. For now we just run the no_backend package tests instead.
+    // test_step.dependOn(zgui_glfw_wgpu_pkg.makeTestStep(b));
+    // test_step.dependOn(zgui_glfw_gl_pkg.makeTestStep(b));
+    test_step.dependOn(zgui.package(
+        b,
+        options.target,
+        options.optimize,
+        .{ .options = .{ .backend = .no_backend } },
+    ).makeTestStep(b));
 }
 
 fn benchmarks(b: *std.Build, options: Options) void {
@@ -270,31 +279,31 @@ pub var common_pkg: common.Package = undefined;
 pub var common_d2d_pkg: common.Package = undefined;
 pub var zd3d12_d2d_pkg: zd3d12.Package = undefined;
 
-const zsdl = @import("libs/zsdl/build.zig");
-const zopengl = @import("libs/zopengl/build.zig");
-const zmath = @import("libs/zmath/build.zig");
-const zglfw = @import("libs/zglfw/build.zig");
-const zpool = @import("libs/zpool/build.zig");
-const zjobs = @import("libs/zjobs/build.zig");
-const zmesh = @import("libs/zmesh/build.zig");
-const znoise = @import("libs/znoise/build.zig");
-const zstbi = @import("libs/zstbi/build.zig");
-const zwin32 = @import("libs/zwin32/build.zig");
-const zd3d12 = @import("libs/zd3d12/build.zig");
-const zxaudio2 = @import("libs/zxaudio2/build.zig");
-const zpix = @import("libs/zpix/build.zig");
-const common = @import("libs/common/build.zig");
-const zbullet = @import("libs/zbullet/build.zig");
-const zgui = @import("libs/zgui/build.zig");
-const zgpu = @import("libs/zgpu/build.zig");
-const ztracy = @import("libs/ztracy/build.zig");
-const zphysics = @import("libs/zphysics/build.zig");
-const zaudio = @import("libs/zaudio/build.zig");
-const zflecs = @import("libs/zflecs/build.zig");
+const zsdl = @import("zsdl");
+const zopengl = @import("zopengl");
+const zmath = @import("zmath");
+const zglfw = @import("zglfw");
+const zpool = @import("zpool");
+const zjobs = @import("zjobs");
+const zmesh = @import("zmesh");
+const znoise = @import("znoise");
+const zstbi = @import("zstbi");
+const zwin32 = @import("zwin32");
+const zd3d12 = @import("zd3d12");
+const zxaudio2 = @import("zxaudio2");
+const zpix = @import("zpix");
+const common = @import("common");
+const zbullet = @import("zbullet");
+const zgui = @import("zgui");
+const zgpu = @import("zgpu");
+const ztracy = @import("ztracy");
+const zphysics = @import("zphysics");
+const zaudio = @import("zaudio");
+const zflecs = @import("zflecs");
 
 pub const Options = struct {
     optimize: std.builtin.Mode,
-    target: std.zig.CrossTarget,
+    target: std.Build.ResolvedTarget,
 
     zd3d12_enable_debug_layer: bool,
     zd3d12_enable_gbv: bool,
@@ -302,11 +311,12 @@ pub const Options = struct {
     zpix_enable: bool,
 };
 
-fn install(b: *std.Build, exe: *std.Build.CompileStep, comptime name: []const u8) void {
+fn install(b: *std.Build, exe: *std.Build.Step.Compile, comptime name: []const u8) void {
     // TODO: Problems with LTO on Windows.
     exe.want_lto = false;
-    if (exe.optimize == .ReleaseFast)
-        exe.strip = true;
+    if (exe.root_module.optimize) |o| {
+        if (o == .ReleaseFast) exe.root_module.strip = true;
+    }
 
     //comptime var desc_name: [256]u8 = [_]u8{0} ** 256;
     //comptime _ = std.mem.replace(u8, name, "", "", desc_name[0..]);
@@ -346,8 +356,8 @@ fn ensureZigVersion() !void {
     }
 }
 
-fn ensureTarget(cross: std.zig.CrossTarget) !void {
-    const target = (std.zig.system.NativeTargetInfo.detect(cross) catch unreachable).target;
+fn ensureTarget(cross: std.Build.ResolvedTarget) !void {
+    const target = cross.result;
 
     const supported = switch (target.os.tag) {
         .windows => target.cpu.arch.isX86() and target.abi.isGnu(),

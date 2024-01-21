@@ -9,18 +9,18 @@ pub const Package = struct {
     options: Options,
     zmesh: *std.Build.Module,
     zmesh_options: *std.Build.Module,
-    zmesh_c_cpp: *std.Build.CompileStep,
+    zmesh_c_cpp: *std.Build.Step.Compile,
 
-    pub fn link(pkg: Package, exe: *std.Build.CompileStep) void {
-        exe.linkLibrary(pkg.zmesh_c_cpp);
-        exe.addModule("zmesh", pkg.zmesh);
-        exe.addModule("zmesh_options", pkg.zmesh_options);
+    pub fn link(pkg: Package, exe: *std.Build.Step.Compile) void {
+        exe.root_module.linkLibrary(pkg.zmesh_c_cpp);
+        exe.root_module.addImport("zmesh", pkg.zmesh);
+        exe.root_module.addImport("zmesh_options", pkg.zmesh_options);
     }
 };
 
 pub fn package(
     b: *std.Build,
-    target: std.zig.CrossTarget,
+    target: std.Build.ResolvedTarget,
     optimize: std.builtin.Mode,
     args: struct {
         options: Options = .{},
@@ -32,9 +32,9 @@ pub fn package(
 
     const zmesh_options = step.createModule();
 
-    const zmesh = b.createModule(.{
-        .source_file = .{ .path = thisDir() ++ "/src/main.zig" },
-        .dependencies = &.{
+    const zmesh = b.addModule("zmesh", .{
+        .root_source_file = .{ .path = thisDir() ++ "/src/main.zig" },
+        .imports = &.{
             .{ .name = "zmesh_options", .module = zmesh_options },
         },
     });
@@ -46,7 +46,7 @@ pub fn package(
             .optimize = optimize,
         });
 
-        if (target.isWindows()) {
+        if (target.result.os.tag == .windows) {
             lib.defineCMacro("CGLTF_API", "__declspec(dllexport)");
             lib.defineCMacro("MESHOPTIMIZER_API", "__declspec(dllexport)");
             lib.defineCMacro("ZMESH_API", "__declspec(dllexport)");
@@ -59,23 +59,22 @@ pub fn package(
         .optimize = optimize,
     });
 
-    const abi = (std.zig.system.NativeTargetInfo.detect(target) catch unreachable).target.abi;
-    zmesh_c_cpp.linkLibC();
-    if (abi != .msvc)
-        zmesh_c_cpp.linkLibCpp();
+    zmesh_c_cpp.root_module.link_libc = true;
+    if (target.result.abi != .msvc)
+        zmesh_c_cpp.root_module.link_libcpp = true;
 
     const par_shapes_t = if (args.options.shape_use_32bit_indices)
         "-DPAR_SHAPES_T=uint32_t"
     else
         "-DPAR_SHAPES_T=uint16_t";
 
-    zmesh_c_cpp.addIncludePath(.{ .path = thisDir() ++ "/libs/par_shapes" });
-    zmesh_c_cpp.addCSourceFile(.{
+    zmesh_c_cpp.root_module.addIncludePath(.{ .path = thisDir() ++ "/libs/par_shapes" });
+    zmesh_c_cpp.root_module.addCSourceFile(.{
         .file = .{ .path = thisDir() ++ "/libs/par_shapes/par_shapes.c" },
         .flags = &.{ "-std=c99", "-fno-sanitize=undefined", par_shapes_t },
     });
 
-    zmesh_c_cpp.addCSourceFiles(.{
+    zmesh_c_cpp.root_module.addCSourceFiles(.{
         .files = &.{
             thisDir() ++ "/libs/meshoptimizer/clusterizer.cpp",
             thisDir() ++ "/libs/meshoptimizer/indexgenerator.cpp",
@@ -90,8 +89,8 @@ pub fn package(
         },
         .flags = &.{""},
     });
-    zmesh_c_cpp.addIncludePath(.{ .path = thisDir() ++ "/libs/cgltf" });
-    zmesh_c_cpp.addCSourceFile(.{
+    zmesh_c_cpp.root_module.addIncludePath(.{ .path = thisDir() ++ "/libs/cgltf" });
+    zmesh_c_cpp.root_module.addCSourceFile(.{
         .file = .{ .path = thisDir() ++ "/libs/cgltf/cgltf.c" },
         .flags = &.{"-std=c99"},
     });
@@ -110,12 +109,19 @@ pub fn build(b: *std.Build) void {
 
     const test_step = b.step("test", "Run zmesh tests");
     test_step.dependOn(runTests(b, optimize, target));
+
+    _ = package(b, target, optimize, .{
+        .options = .{
+            .shape_use_32bit_indices = b.option(bool, "shape_use_32bit_indices", "Enable par shapes 32-bit indices") orelse true,
+            .shared = b.option(bool, "shared", "Build as shared library") orelse false,
+        },
+    });
 }
 
 pub fn runTests(
     b: *std.Build,
     optimize: std.builtin.Mode,
-    target: std.zig.CrossTarget,
+    target: std.Build.ResolvedTarget,
 ) *std.Build.Step {
     const tests = b.addTest(.{
         .name = "zmesh-tests",

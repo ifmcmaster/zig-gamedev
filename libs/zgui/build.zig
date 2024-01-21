@@ -1,5 +1,8 @@
 const std = @import("std");
 
+const zglfw = @import("zglfw");
+const zgpu = @import("zgpu");
+
 pub const Backend = enum {
     no_backend,
     glfw_wgpu,
@@ -8,30 +11,50 @@ pub const Backend = enum {
     sdl2_gl3,
 };
 
+const default_options = struct {
+    const shared = false;
+    const with_imgui = true;
+    const with_implot = true;
+};
+
 pub const Options = struct {
     backend: Backend,
-    shared: bool = false,
+    shared: bool = default_options.shared,
     /// use bundled imgui source
-    with_imgui: bool = true,
+    with_imgui: bool = default_options.with_imgui,
     /// use bundled implot source
-    with_implot: bool = true,
+    with_implot: bool = default_options.with_implot,
 };
 
 pub const Package = struct {
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.Mode,
     options: Options,
     zgui: *std.Build.Module,
     zgui_options: *std.Build.Module,
-    zgui_c_cpp: *std.Build.CompileStep,
+    zgui_c_cpp: *std.Build.Step.Compile,
 
-    pub fn link(pkg: Package, exe: *std.Build.CompileStep) void {
-        exe.linkLibrary(pkg.zgui_c_cpp);
-        exe.addModule("zgui", pkg.zgui);
+    pub fn link(pkg: Package, exe: *std.Build.Step.Compile) void {
+        exe.root_module.linkLibrary(pkg.zgui_c_cpp);
+        exe.root_module.addImport("zgui", pkg.zgui);
+        exe.root_module.addImport("zgui_options", pkg.zgui_options);
+    }
+
+    pub fn makeTestStep(pkg: Package, b: *std.Build) *std.Build.Step {
+        const gui_tests = b.addTest(.{
+            .name = "gui-tests",
+            .root_source_file = .{ .path = thisDir() ++ "/src/gui.zig" },
+            .target = pkg.target,
+            .optimize = pkg.optimize,
+        });
+        pkg.link(gui_tests);
+        return &b.addRunArtifact(gui_tests).step;
     }
 };
 
 pub fn package(
     b: *std.Build,
-    target: std.zig.CrossTarget,
+    target: std.Build.ResolvedTarget,
     optimize: std.builtin.Mode,
     args: struct {
         options: Options,
@@ -43,9 +66,9 @@ pub fn package(
 
     const zgui_options = step.createModule();
 
-    const zgui = b.createModule(.{
-        .source_file = .{ .path = thisDir() ++ "/src/gui.zig" },
-        .dependencies = &.{
+    const zgui = b.addModule("zgui", .{
+        .root_source_file = .{ .path = thisDir() ++ "/src/gui.zig" },
+        .imports = &.{
             .{ .name = "zgui_options", .module = zgui_options },
         },
     });
@@ -58,10 +81,14 @@ pub fn package(
         });
 
         b.installArtifact(lib);
-        if (target.isWindows()) {
+        if (target.result.os.tag == .windows) {
             lib.defineCMacro("IMGUI_API", "__declspec(dllexport)");
             lib.defineCMacro("IMPLOT_API", "__declspec(dllexport)");
             lib.defineCMacro("ZGUI_API", "__declspec(dllexport)");
+        }
+
+        if (target.result.os.tag == .macos) {
+            lib.linker_allow_shlib_undefined = true;
         }
 
         break :blk lib;
@@ -71,23 +98,22 @@ pub fn package(
         .optimize = optimize,
     });
 
-    zgui_c_cpp.addIncludePath(.{ .path = thisDir() ++ "/libs" });
-    zgui_c_cpp.addIncludePath(.{ .path = thisDir() ++ "/libs/imgui" });
+    zgui_c_cpp.root_module.addIncludePath(.{ .path = thisDir() ++ "/libs" });
+    zgui_c_cpp.root_module.addIncludePath(.{ .path = thisDir() ++ "/libs/imgui" });
 
-    const abi = (std.zig.system.NativeTargetInfo.detect(target) catch unreachable).target.abi;
-    zgui_c_cpp.linkLibC();
-    if (abi != .msvc)
-        zgui_c_cpp.linkLibCpp();
+    zgui_c_cpp.root_module.link_libc = true;
+    if (target.result.abi != .msvc)
+        zgui_c_cpp.root_module.link_libcpp = true;
 
     const cflags = &.{"-fno-sanitize=undefined"};
 
-    zgui_c_cpp.addCSourceFile(.{
+    zgui_c_cpp.root_module.addCSourceFile(.{
         .file = .{ .path = thisDir() ++ "/src/zgui.cpp" },
         .flags = cflags,
     });
 
     if (args.options.with_imgui) {
-        zgui_c_cpp.addCSourceFiles(.{
+        zgui_c_cpp.root_module.addCSourceFiles(.{
             .files = &.{
                 thisDir() ++ "/libs/imgui/imgui.cpp",
                 thisDir() ++ "/libs/imgui/imgui_widgets.cpp",
@@ -100,7 +126,8 @@ pub fn package(
     }
 
     if (args.options.with_implot) {
-        zgui_c_cpp.addCSourceFiles(.{
+        zgui_c_cpp.defineCMacro("ZGUI_IMPLOT", "1");
+        zgui_c_cpp.root_module.addCSourceFiles(.{
             .files = &.{
                 thisDir() ++ "/libs/imgui/implot_demo.cpp",
                 thisDir() ++ "/libs/imgui/implot.cpp",
@@ -108,13 +135,19 @@ pub fn package(
             },
             .flags = cflags,
         });
+    } else {
+        zgui_c_cpp.defineCMacro("ZGUI_IMPLOT", "0");
     }
 
     switch (args.options.backend) {
         .glfw_wgpu => {
-            zgui_c_cpp.addIncludePath(.{ .path = thisDir() ++ "/../zglfw/libs/glfw/include" });
-            zgui_c_cpp.addIncludePath(.{ .path = thisDir() ++ "/../zgpu/libs/dawn/include" });
-            zgui_c_cpp.addCSourceFiles(.{
+            zgui_c_cpp.root_module.addIncludePath(.{
+                .path = zglfw.path ++ "/libs/glfw/include",
+            });
+            zgui_c_cpp.root_module.addIncludePath(.{
+                .path = zgpu.path ++ "/libs/dawn/include",
+            });
+            zgui_c_cpp.root_module.addCSourceFiles(.{
                 .files = &.{
                     thisDir() ++ "/libs/imgui/backends/imgui_impl_glfw.cpp",
                     thisDir() ++ "/libs/imgui/backends/imgui_impl_wgpu.cpp",
@@ -123,9 +156,13 @@ pub fn package(
             });
         },
         .glfw_opengl3 => {
-            zgui_c_cpp.addIncludePath(.{ .path = thisDir() ++ "/../zglfw/libs/glfw/include" });
-            zgui_c_cpp.addIncludePath(.{ .path = thisDir() ++ "/../zgpu/libs/dawn/include" });
-            zgui_c_cpp.addCSourceFiles(.{
+            zgui_c_cpp.root_module.addIncludePath(.{
+                .path = zglfw.path ++ "/libs/glfw/include",
+            });
+            zgui_c_cpp.root_module.addIncludePath(.{
+                .path = zgpu.path ++ "/libs/dawn/include",
+            });
+            zgui_c_cpp.root_module.addCSourceFiles(.{
                 .files = &.{
                     thisDir() ++ "/libs/imgui/backends/imgui_impl_glfw.cpp",
                     thisDir() ++ "/libs/imgui/backends/imgui_impl_opengl3.cpp",
@@ -134,30 +171,29 @@ pub fn package(
             });
         },
         .win32_dx12 => {
-            zgui_c_cpp.addCSourceFiles(.{
+            zgui_c_cpp.root_module.addCSourceFiles(.{
                 .files = &.{
                     thisDir() ++ "/libs/imgui/backends/imgui_impl_win32.cpp",
                     thisDir() ++ "/libs/imgui/backends/imgui_impl_dx12.cpp",
                 },
                 .flags = cflags,
             });
-            zgui_c_cpp.linkSystemLibraryName("d3dcompiler_47");
-            zgui_c_cpp.linkSystemLibraryName("dwmapi");
+            zgui_c_cpp.root_module.linkSystemLibrary("d3dcompiler_47", .{});
+            zgui_c_cpp.root_module.linkSystemLibrary("dwmapi", .{});
         },
         .sdl2_gl3 => {
-            zgui_c_cpp.addLibraryPath(.{.path = "/opt/homebrew/lib"});
-            zgui_c_cpp.addIncludePath(.{.path = "/opt/homebrew/include"});
-            zgui_c_cpp.linkSystemLibrary("SDL2");
-            // zgui_c_cpp.addIncludePath(.{.path = thisDir() ++ "/../zsdl/libs/macos/Frameworks/SDL2.framework/Headers"});
-            zgui_c_cpp.addCSourceFiles(&.{
+            zgui_c_cpp.addIncludePath(.{ .path = thisDir() ++ "./libs/SDL2/include" });
+            zgui_c_cpp.addCSourceFiles(.{.files = &.{
                 thisDir() ++ "/libs/imgui/backends/imgui_impl_sdl2.cpp",
                 thisDir() ++ "/libs/imgui/backends/imgui_impl_opengl3.cpp",
-            }, cflags);
+            }, .flags = cflags});
         },
         .no_backend => {},
     }
 
     return .{
+        .target = target,
+        .optimize = optimize,
         .options = args.options,
         .zgui = zgui,
         .zgui_options = zgui_options,
@@ -165,7 +201,34 @@ pub fn package(
     };
 }
 
-pub fn build(_: *std.Build) void {}
+pub fn build(b: *std.Build) void {
+    const optimize = b.standardOptimizeOption(.{});
+    const target = b.standardTargetOptions(.{});
+
+    const pkg = package(b, target, optimize, .{
+        .options = .{
+            .backend = b.option(Backend, "backend", "Select backend") orelse .no_backend,
+            .shared = b.option(
+                bool,
+                "shared",
+                "Bulid as a shared library",
+            ) orelse default_options.shared,
+            .with_imgui = b.option(
+                bool,
+                "with_imgui",
+                "Build with bundled imgui source",
+            ) orelse default_options.with_imgui,
+            .with_implot = b.option(
+                bool,
+                "with_implot",
+                "Build with bundled implot source",
+            ) orelse default_options.with_implot,
+        },
+    });
+
+    const test_step = b.step("test", "Run zgui tests");
+    test_step.dependOn(pkg.makeTestStep(b));
+}
 
 inline fn thisDir() []const u8 {
     return comptime std.fs.path.dirname(@src().file) orelse ".";

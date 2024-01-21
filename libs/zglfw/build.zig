@@ -1,31 +1,44 @@
 const std = @import("std");
+const system_sdk = @import("system_sdk");
+
+pub const path = getPath();
+
+inline fn getPath() []const u8 {
+    return std.fs.path.dirname(@src().file) orelse unreachable;
+}
 
 pub const Package = struct {
     zglfw: *std.Build.Module,
-    zglfw_c_cpp: *std.Build.CompileStep,
+    zglfw_c_cpp: *std.Build.Step.Compile,
 
-    pub fn link(pkg: Package, exe: *std.Build.CompileStep) void {
-        exe.addModule("zglfw", pkg.zglfw);
+    pub fn link(pkg: Package, exe: *std.Build.Step.Compile) void {
+        exe.root_module.addImport("zglfw", pkg.zglfw);
 
-        const host = (std.zig.system.NativeTargetInfo.detect(exe.target) catch unreachable).target;
+        const host = exe.rootModuleTarget();
 
         switch (host.os.tag) {
             .windows => {},
             .macos => {
-                exe.addLibraryPath(.{ .path = thisDir() ++ "/../system-sdk/macos12/usr/lib" });
+                exe.root_module.addLibraryPath(.{
+                    .path = system_sdk.path ++ "/macos12/usr/lib",
+                });
             },
             else => {
                 // We assume Linux (X11)
                 if (host.cpu.arch.isX86()) {
-                    exe.addLibraryPath(.{ .path = thisDir() ++ "/../system-sdk/linux/lib/x86_64-linux-gnu" });
+                    exe.root_module.addLibraryPath(.{
+                        .path = system_sdk.path ++ "/linux/lib/x86_64-linux-gnu",
+                    });
                 } else {
-                    exe.addLibraryPath(.{ .path = thisDir() ++ "/../system-sdk/linux/lib/aarch64-linux-gnu" });
+                    exe.root_module.addLibraryPath(.{
+                        .path = system_sdk.path ++ "/linux/lib/aarch64-linux-gnu",
+                    });
                 }
             },
         }
 
         if (pkg.zglfw_c_cpp.linkage) |linkage| {
-            if (exe.target.isWindows() and linkage == .dynamic) {
+            if (host.os.tag == .windows and linkage == .dynamic) {
                 exe.defineCMacro("GLFW_DLL", null);
             }
         }
@@ -40,7 +53,7 @@ pub const Options = struct {
 
 pub fn package(
     b: *std.Build,
-    target: std.zig.CrossTarget,
+    target: std.Build.ResolvedTarget,
     optimize: std.builtin.Mode,
     args: struct {
         options: Options = .{},
@@ -50,7 +63,7 @@ pub fn package(
     step.addOption(bool, "shared", args.options.shared);
 
     const zglfw = b.addModule("zglfw", .{
-        .source_file = .{ .path = thisDir() ++ "/src/zglfw.zig" },
+        .root_source_file = .{ .path = path ++ "/src/zglfw.zig" },
     });
 
     const zglfw_c_cpp = if (args.options.shared) blk: {
@@ -60,7 +73,7 @@ pub fn package(
             .optimize = optimize,
         });
 
-        if (target.isWindows()) {
+        if (target.result.os.tag == .windows) {
             lib.defineCMacro("_GLFW_BUILD_DLL", null);
         }
 
@@ -71,19 +84,21 @@ pub fn package(
         .optimize = optimize,
     });
 
-    zglfw_c_cpp.addIncludePath(.{ .path = thisDir() ++ "/libs/glfw/include" });
-    zglfw_c_cpp.linkLibC();
+    zglfw_c_cpp.root_module.addIncludePath(.{
+        .path = path ++ "/libs/glfw/include",
+    });
+    zglfw_c_cpp.root_module.link_libc = true;
 
-    const host = (std.zig.system.NativeTargetInfo.detect(zglfw_c_cpp.target) catch unreachable).target;
+    const host = target.result;
 
-    const src_dir = thisDir() ++ "/libs/glfw/src/";
+    const src_dir = path ++ "/libs/glfw/src/";
 
     switch (host.os.tag) {
         .windows => {
-            zglfw_c_cpp.linkSystemLibraryName("gdi32");
-            zglfw_c_cpp.linkSystemLibraryName("user32");
-            zglfw_c_cpp.linkSystemLibraryName("shell32");
-            zglfw_c_cpp.addCSourceFiles(.{
+            zglfw_c_cpp.root_module.linkSystemLibrary("gdi32", .{});
+            zglfw_c_cpp.root_module.linkSystemLibrary("user32", .{});
+            zglfw_c_cpp.root_module.linkSystemLibrary("shell32", .{});
+            zglfw_c_cpp.root_module.addCSourceFiles(.{
                 .files = &.{
                     src_dir ++ "monitor.c",
                     src_dir ++ "init.c",
@@ -105,20 +120,24 @@ pub fn package(
             });
         },
         .macos => {
-            zglfw_c_cpp.addFrameworkPath(
-                .{ .path = thisDir() ++ "/../system-sdk/macos12/System/Library/Frameworks" },
+            zglfw_c_cpp.root_module.addFrameworkPath(
+                .{ .path = system_sdk.path ++ "/macos12/System/Library/Frameworks" },
             );
-            zglfw_c_cpp.addSystemIncludePath(.{ .path = thisDir() ++ "/../system-sdk/macos12/usr/include" });
-            zglfw_c_cpp.addLibraryPath(.{ .path = thisDir() ++ "/../system-sdk/macos12/usr/lib" });
-            zglfw_c_cpp.linkSystemLibraryName("objc");
-            zglfw_c_cpp.linkFramework("IOKit");
-            zglfw_c_cpp.linkFramework("CoreFoundation");
-            zglfw_c_cpp.linkFramework("Metal");
-            zglfw_c_cpp.linkFramework("AppKit");
-            zglfw_c_cpp.linkFramework("CoreServices");
-            zglfw_c_cpp.linkFramework("CoreGraphics");
-            zglfw_c_cpp.linkFramework("Foundation");
-            zglfw_c_cpp.addCSourceFiles(.{
+            zglfw_c_cpp.root_module.addSystemIncludePath(.{
+                .path = system_sdk.path ++ "/macos12/usr/include",
+            });
+            zglfw_c_cpp.root_module.addLibraryPath(.{
+                .path = system_sdk.path ++ "/macos12/usr/lib",
+            });
+            zglfw_c_cpp.root_module.linkSystemLibrary("objc", .{});
+            zglfw_c_cpp.root_module.linkFramework("IOKit", .{});
+            zglfw_c_cpp.root_module.linkFramework("CoreFoundation", .{});
+            zglfw_c_cpp.root_module.linkFramework("Metal", .{});
+            zglfw_c_cpp.root_module.linkFramework("AppKit", .{});
+            zglfw_c_cpp.root_module.linkFramework("CoreServices", .{});
+            zglfw_c_cpp.root_module.linkFramework("CoreGraphics", .{});
+            zglfw_c_cpp.root_module.linkFramework("Foundation", .{});
+            zglfw_c_cpp.root_module.addCSourceFiles(.{
                 .files = &.{
                     src_dir ++ "monitor.c",
                     src_dir ++ "init.c",
@@ -141,14 +160,20 @@ pub fn package(
         },
         else => {
             // We assume Linux (X11)
-            zglfw_c_cpp.addSystemIncludePath(.{ .path = thisDir() ++ "/../system-sdk/linux/include" });
+            zglfw_c_cpp.root_module.addSystemIncludePath(.{
+                .path = system_sdk.path ++ "/linux/include",
+            });
             if (host.cpu.arch.isX86()) {
-                zglfw_c_cpp.addLibraryPath(.{ .path = thisDir() ++ "/../system-sdk/linux/lib/x86_64-linux-gnu" });
+                zglfw_c_cpp.root_module.addLibraryPath(.{
+                    .path = system_sdk.path ++ "/linux/lib/x86_64-linux-gnu",
+                });
             } else {
-                zglfw_c_cpp.addLibraryPath(.{ .path = thisDir() ++ "/../system-sdk/linux/lib/aarch64-linux-gnu" });
+                zglfw_c_cpp.root_module.addLibraryPath(.{
+                    .path = system_sdk.path ++ "/linux/lib/aarch64-linux-gnu",
+                });
             }
-            zglfw_c_cpp.linkSystemLibraryName("X11");
-            zglfw_c_cpp.addCSourceFiles(.{
+            zglfw_c_cpp.root_module.linkSystemLibrary("X11", .{});
+            zglfw_c_cpp.root_module.addCSourceFiles(.{
                 .files = &.{
                     src_dir ++ "monitor.c",
                     src_dir ++ "init.c",
@@ -192,11 +217,11 @@ pub fn build(b: *std.Build) void {
 pub fn runTests(
     b: *std.Build,
     optimize: std.builtin.Mode,
-    target: std.zig.CrossTarget,
+    target: std.Build.ResolvedTarget,
 ) *std.Build.Step {
     const tests = b.addTest(.{
         .name = "zglfw-tests",
-        .root_source_file = .{ .path = thisDir() ++ "/src/zglfw.zig" },
+        .root_source_file = .{ .path = path ++ "/src/zglfw.zig" },
         .target = target,
         .optimize = optimize,
     });
@@ -205,8 +230,4 @@ pub fn runTests(
     zglfw_pkg.link(tests);
 
     return &b.addRunArtifact(tests).step;
-}
-
-inline fn thisDir() []const u8 {
-    return comptime std.fs.path.dirname(@src().file) orelse ".";
 }

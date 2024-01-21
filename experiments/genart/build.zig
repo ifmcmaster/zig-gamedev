@@ -11,9 +11,9 @@ pub fn build(b: *std.Build, options: Options) void {
 }
 
 fn install(
-    b: *std.build.Builder,
+    b: *std.Build,
     optimize: std.builtin.Mode,
-    target: std.zig.CrossTarget,
+    target: std.Build.ResolvedTarget,
     comptime name: []const u8,
 ) void {
     const zsdl_pkg = @import("../../build.zig").zsdl_pkg;
@@ -24,19 +24,19 @@ fn install(
 
     comptime var desc_name: [256]u8 = [_]u8{0} ** 256;
     comptime _ = std.mem.replace(u8, name, "_", " ", desc_name[0..]);
-    comptime var desc_size = std.mem.indexOf(u8, &desc_name, "\x00").?;
+    const desc_size = comptime std.mem.indexOf(u8, &desc_name, "\x00").?;
 
     const xcommon = b.createModule(.{
-        .source_file = .{ .path = thisDir() ++ "/src/xcommon.zig" },
-        .dependencies = &.{
+        .root_source_file = .{ .path = thisDir() ++ "/src/xcommon.zig" },
+        .imports = &.{
             .{ .name = "zsdl", .module = zsdl_pkg.zsdl },
             .{ .name = "zopengl", .module = zopengl_pkg.zopengl },
             .{ .name = "zstbi", .module = zstbi_pkg.zstbi },
         },
     });
     const ximpl = b.createModule(.{
-        .source_file = .{ .path = thisDir() ++ "/src/" ++ name ++ ".zig" },
-        .dependencies = &.{
+        .root_source_file = .{ .path = thisDir() ++ "/src/" ++ name ++ ".zig" },
+        .imports = &.{
             .{ .name = "zsdl", .module = zsdl_pkg.zsdl },
             .{ .name = "zopengl", .module = zopengl_pkg.zopengl },
             .{ .name = "zmath", .module = zmath_pkg.zmath },
@@ -51,8 +51,8 @@ fn install(
         .optimize = optimize,
     });
     exe.rdynamic = true;
-    exe.addModule("xcommon", xcommon);
-    exe.addModule("ximpl", ximpl);
+    exe.root_module.addImport("xcommon", xcommon);
+    exe.root_module.addImport("ximpl", ximpl);
     zsdl_pkg.link(exe);
     zopengl_pkg.link(exe);
     zstbi_pkg.link(exe);
