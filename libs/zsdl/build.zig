@@ -32,13 +32,13 @@ pub const Package = struct {
                 assert(target.cpu.arch.isX86());
 
                 exe.root_module.addLibraryPath(.{
-                    .path = thisDir() ++ "/libs/x86_64-windows-gnu/lib",
+                    .path = thisDir() ++ "/libs/x86_64-windows-msvc/lib",
                 });
 
                 switch (pkg.options.api_version) {
                     .sdl2 => {
                         exe.root_module.linkSystemLibrary("SDL2", .{});
-                        exe.root_module.linkSystemLibrary("SDL2main", .{});
+                        // exe.root_module.linkSystemLibrary("SDL2main", .{});
                         if (pkg.options.enable_ttf) {
                             exe.root_module.linkSystemLibrary("SDL2_ttf", .{});
                         }
@@ -70,7 +70,7 @@ pub const Package = struct {
                 }
             },
             .macos => {
-               exe.root_module.addRPathSpecial("@executable_path/Frameworks");
+                exe.root_module.addRPathSpecial("@executable_path/Frameworks");
 
                 exe.root_module.addFrameworkPath(.{
                     .path = thisDir() ++ "/libs/macos/Frameworks",
@@ -131,14 +131,14 @@ pub fn package(
             .sdl2 => {
                 install_step.dependOn(
                     &b.addInstallFile(
-                        .{ .path = thisDir() ++ "/libs/x86_64-windows-gnu/bin/SDL2.dll" },
+                        .{ .path = thisDir() ++ "/libs/x86_64-windows-msvc/bin/SDL2.dll" },
                         "bin/SDL2.dll",
                     ).step,
                 );
                 if (args.options.enable_ttf) {
                     install_step.dependOn(
                         &b.addInstallFile(
-                            .{ .path = thisDir() ++ "/libs/x86_64-windows-gnu/bin/SDL2_ttf.dll" },
+                            .{ .path = thisDir() ++ "/libs/x86_64-windows-msvc/bin/SDL2_ttf.dll" },
                             "bin/SDL2_ttf.dll",
                         ).step,
                     );
