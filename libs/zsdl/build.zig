@@ -78,9 +78,9 @@ pub const Package = struct {
                 exe.root_module.addLibraryPath(.{.path = "/opt/homebrew/lib"});
                 exe.root_module.linkSystemLibrary("SDL2", .{});
 
-                // exe.root_module.addFrameworkPath(.{
-                //     .path = thisDir() ++ "/libs/macos/Frameworks",
-                // });
+                exe.root_module.addFrameworkPath(.{
+                    .path = thisDir() ++ "/libs/macos/Frameworks",
+                });
 
                 // switch (pkg.options.api_version) {
                 //     .sdl2 => {

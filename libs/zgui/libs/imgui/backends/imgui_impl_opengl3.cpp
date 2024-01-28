@@ -642,8 +642,8 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     // Desktop OpenGL 3.0 and OpenGL 3.1 had separate polygon draw modes for front-facing and back-facing faces of polygons
     if (bd->GlVersion <= 310 || bd->GlProfileIsCompat)
     {
-        glPolygonMode(GL_FRONT, (GLenum)last_polygon_mode[0]);
-        glPolygonMode(GL_BACK, (GLenum)last_polygon_mode[1]);
+        // glPolygonMode(GL_FRONT, (GLenum)last_polygon_mode[0]);
+        // glPolygonMode(GL_BACK, (GLenum)last_polygon_mode[1]);
     }
     else
     {
