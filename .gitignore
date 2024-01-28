@@ -45,3 +45,4 @@
 zig-cache
 zig-out
 backup
+.DS_Store
