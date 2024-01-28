@@ -1,7 +1,7 @@
 const std = @import("std");
 
-const zglfw = @import("zglfw");
-const zgpu = @import("zgpu");
+// const zglfw = @import("zglfw");
+// const zgpu = @import("zgpu");
 
 pub const Backend = enum {
     no_backend,
@@ -141,34 +141,34 @@ pub fn package(
 
     switch (args.options.backend) {
         .glfw_wgpu => {
-            zgui_c_cpp.root_module.addIncludePath(.{
-                .path = zglfw.path ++ "/libs/glfw/include",
-            });
-            zgui_c_cpp.root_module.addIncludePath(.{
-                .path = zgpu.path ++ "/libs/dawn/include",
-            });
-            zgui_c_cpp.root_module.addCSourceFiles(.{
-                .files = &.{
-                    thisDir() ++ "/libs/imgui/backends/imgui_impl_glfw.cpp",
-                    thisDir() ++ "/libs/imgui/backends/imgui_impl_wgpu.cpp",
-                },
-                .flags = cflags,
-            });
+            // zgui_c_cpp.root_module.addIncludePath(.{
+            //     .path = zglfw.path ++ "/libs/glfw/include",
+            // });
+            // zgui_c_cpp.root_module.addIncludePath(.{
+            //     .path = zgpu.path ++ "/libs/dawn/include",
+            // });
+            // zgui_c_cpp.root_module.addCSourceFiles(.{
+            //     .files = &.{
+            //         thisDir() ++ "/libs/imgui/backends/imgui_impl_glfw.cpp",
+            //         thisDir() ++ "/libs/imgui/backends/imgui_impl_wgpu.cpp",
+            //     },
+            //     .flags = cflags,
+            // });
         },
         .glfw_opengl3 => {
-            zgui_c_cpp.root_module.addIncludePath(.{
-                .path = zglfw.path ++ "/libs/glfw/include",
-            });
-            zgui_c_cpp.root_module.addIncludePath(.{
-                .path = zgpu.path ++ "/libs/dawn/include",
-            });
-            zgui_c_cpp.root_module.addCSourceFiles(.{
-                .files = &.{
-                    thisDir() ++ "/libs/imgui/backends/imgui_impl_glfw.cpp",
-                    thisDir() ++ "/libs/imgui/backends/imgui_impl_opengl3.cpp",
-                },
-                .flags = &(cflags.* ++ .{"-DIMGUI_IMPL_OPENGL_LOADER_CUSTOM"}),
-            });
+            // zgui_c_cpp.root_module.addIncludePath(.{
+            //     .path = zglfw.path ++ "/libs/glfw/include",
+            // });
+            // zgui_c_cpp.root_module.addIncludePath(.{
+            //     .path = zgpu.path ++ "/libs/dawn/include",
+            // });
+            // zgui_c_cpp.root_module.addCSourceFiles(.{
+            //     .files = &.{
+            //         thisDir() ++ "/libs/imgui/backends/imgui_impl_glfw.cpp",
+            //         thisDir() ++ "/libs/imgui/backends/imgui_impl_opengl3.cpp",
+            //     },
+            //     .flags = &(cflags.* ++ .{"-DIMGUI_IMPL_OPENGL_LOADER_CUSTOM"}),
+            // });
         },
         .win32_dx12 => {
             zgui_c_cpp.root_module.addCSourceFiles(.{
@@ -182,7 +182,7 @@ pub fn package(
             zgui_c_cpp.root_module.linkSystemLibrary("dwmapi", .{});
         },
         .sdl2_gl3 => {
-            zgui_c_cpp.addIncludePath(.{ .path = thisDir() ++ "./libs/SDL2/include" });
+            zgui_c_cpp.addIncludePath(.{ .path = thisDir() ++ "/libs/SDL2/include" });
             zgui_c_cpp.addCSourceFiles(.{.files = &.{
                 thisDir() ++ "/libs/imgui/backends/imgui_impl_sdl2.cpp",
                 thisDir() ++ "/libs/imgui/backends/imgui_impl_opengl3.cpp",

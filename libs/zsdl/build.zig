@@ -70,30 +70,34 @@ pub const Package = struct {
                 }
             },
             .macos => {
-                exe.root_module.addRPathSpecial("@executable_path/Frameworks");
+                // exe.root_module.addRPathSpecial("@executable_path/Frameworks");
+
+                exe.root_module.addIncludePath(.{ .path = "/opt/homebrew/include" });
+                exe.root_module.addLibraryPath(.{ .path = "/opt/homebrew/lib" });
+                exe.root_module.linkSystemLibrary("SDL2", .{});
 
                 exe.root_module.addFrameworkPath(.{
                     .path = thisDir() ++ "/libs/macos/Frameworks",
                 });
 
-                switch (pkg.options.api_version) {
-                    .sdl2 => {
-                        exe.root_module.linkFramework("SDL2", .{});
-                        if (pkg.options.enable_ttf) {
-                            exe.root_module.linkFramework("SDL2_ttf", .{});
-                        }
-                    },
-                    .sdl3 => {
-                        // TODO: bundle SDL3.framework instead of this hack
-                        // exe.linkFramework("SDL3");
-                        exe.root_module.addLibraryPath(.{ .path = "/usr/local/lib" });
-                        exe.root_module.linkSystemLibrary("SDL3", .{});
+                // switch (pkg.options.api_version) {
+                //     .sdl2 => {
+                //         exe.root_module.linkFramework("SDL2", .{});
+                //         if (pkg.options.enable_ttf) {
+                //             exe.root_module.linkFramework("SDL2_ttf", .{});
+                //         }
+                //     },
+                //     .sdl3 => {
+                //         // TODO: bundle SDL3.framework instead of this hack
+                //         // exe.linkFramework("SDL3");
+                //         exe.root_module.addLibraryPath(.{ .path = "/usr/local/lib" });
+                //         exe.root_module.linkSystemLibrary("SDL3", .{});
 
-                        if (pkg.options.enable_ttf) {
-                            exe.root_module.linkFramework("SDL2_ttf", .{});
-                        }
-                    },
-                }
+                //         if (pkg.options.enable_ttf) {
+                //             exe.root_module.linkFramework("SDL2_ttf", .{});
+                //         }
+                //     },
+                // }
             },
             else => unreachable,
         }
