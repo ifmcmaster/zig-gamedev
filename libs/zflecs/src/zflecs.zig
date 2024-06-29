@@ -1384,7 +1384,7 @@ extern fn ecs_ref_update(world: *const world_t, ref: *ref_t) void;
 
 /// `pub fn get_mut_id(world: *world_t, entity: entity_t, id: id_t) ?*anyopaque`
 pub const get_mut_id = ecs_get_mut_id;
-extern fn ecs_get_mut_id(world: *world_t, entity: entity_t, id: id_t) ?*anyopaque;
+extern fn ecs_get_mut_id(world: *world_t, entity: entity_t, id: id_t) *anyopaque;
 
 /// `pub fn get_mut_modified_id(world: *world_t, entity: entity_t, id: id_t) ?*anyopaque`
 pub const get_mut_modified_id = ecs_get_mut_modified_id;
@@ -2417,11 +2417,9 @@ pub fn get(world: *const world_t, entity: entity_t, comptime T: type) ?*const T 
     return null;
 }
 
-pub fn get_mut(world: *world_t, entity: entity_t, comptime T: type) ?*T {
-    if (get_mut_id(world, entity, id(T))) |ptr| {
-        return cast_mut(T, ptr);
-    }
-    return null;
+pub fn get_mut(world: *world_t, entity: entity_t, comptime T: type) *T {
+    const ptr = get_mut_id(world, entity, id(T));
+    return cast_mut(T, ptr);
 }
 
 pub fn add(world: *world_t, entity: entity_t, comptime T: type) void {
